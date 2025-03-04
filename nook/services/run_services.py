@@ -7,6 +7,7 @@ import os
 import argparse
 from datetime import datetime
 from dotenv import load_dotenv
+from nook.common.counters import counter
 
 # 環境変数の読み込み
 load_dotenv()
@@ -38,7 +39,7 @@ def run_hacker_news():
     try:
         # クラス名を修正
         hacker_news = HackerNewsRetriever()
-        hacker_news.run()
+        hacker_news.run(20)
         print("Hacker News記事の収集が完了しました。")
     except Exception as e:
         print(f"Hacker News記事の収集中にエラーが発生しました: {str(e)}")
@@ -56,7 +57,7 @@ def run_reddit_explorer():
             return
             
         reddit_explorer = RedditExplorer()
-        reddit_explorer.run()
+        reddit_explorer.run(5)
         print("Reddit投稿の収集が完了しました。")
     except Exception as e:
         print(f"Reddit投稿の収集中にエラーが発生しました: {str(e)}")
@@ -248,7 +249,7 @@ def main():
     if args.service == "all" or args.service == "paper":
         run_paper_summarizer()
     
-    if args.service == "all" or args.service == "twitter":
+    if args.service == "twitter":
         run_twitter_poster()
     
     # 個別のTwitter投稿オプション
@@ -266,6 +267,9 @@ def main():
     
     if args.service == "twitter_techfeed":
         run_twitter_techfeed()
+
+    # 実行完了後にレポートを表示
+    counter.report()
 
 if __name__ == "__main__":
     main() 

@@ -10,9 +10,10 @@ import feedparser
 import requests
 from bs4 import BeautifulSoup
 
-from nook.common.grok_client import Grok3Client
+from nook.common.gemini_client import GeminiClient
 from nook.common.storage import LocalStorage
-
+from googletrans import Translator
+from nook.common.counters import counter
 
 @dataclass
 class Article:
@@ -64,7 +65,7 @@ class TechFeed:
             ストレージディレクトリのパス。
         """
         self.storage = LocalStorage(storage_dir)
-        self.grok_client = Grok3Client()
+        self.client = GeminiClient()
         
         # フィードの設定を読み込む
         script_dir = Path(__file__).parent
@@ -248,16 +249,17 @@ class TechFeed:
         str
             翻訳されたテキスト。
         """
+        if not text:
+            return ""
+
         try:
-            prompt = f"以下の英語のテキストを自然な日本語に翻訳してください。技術用語は適切に翻訳し、必要に応じて英語の専門用語を括弧内に残してください。\n\n{text}"
-            
-            translated_text = self.grok_client.generate_content(
-                prompt=prompt,
-                temperature=0.3,
-                max_tokens=1000
-            )
-            
-            return translated_text
+            # GoogletransのTranslatorインスタンスを作成
+            translator = Translator()
+            # 英語から日本語に翻訳
+            translated = translator.translate(text, src='en', dest='ja')
+            # Googletrans呼び出しをカウント
+            counter.increment_googletrans("tech_feed")
+            return translated.text
         except Exception as e:
             print(f"Error translating text: {str(e)}")
             return text  # 翻訳に失敗した場合は原文を返す
@@ -291,12 +293,14 @@ class TechFeed:
         """
         
         try:
-            summary = self.grok_client.generate_content(
+            summary = self.client.generate_content(
                 prompt=prompt,
                 system_instruction=system_instruction,
                 temperature=0.3,
                 max_tokens=1000
             )
+            # LLM呼び出しをカウント
+            counter.increment_llm("tech_feed")
             article.summary = summary
         except Exception as e:
             article.summary = f"要約の生成中にエラーが発生しました: {str(e)}"

@@ -9,8 +9,9 @@ import requests
 from bs4 import BeautifulSoup
 
 from nook.common.storage import LocalStorage
-from nook.common.grok_client import Grok3Client
-
+from nook.common.gemini_client import GeminiClient
+from googletrans import Translator
+from nook.common.counters import counter
 
 @dataclass
 class Story:
@@ -166,35 +167,31 @@ class HackerNewsRetriever:
             翻訳された記事のリスト。
         """
         try:
-            # 翻訳処理を行わない（デバッグ用）
-            # print("翻訳処理をスキップします（APIエラー回避のため）")
-            
-            # 以下は翻訳処理のコメントアウト
-            # Grok APIクライアントの初期化
-            grok_client = Grok3Client()
-            
+            # GoogletransのTranslatorインスタンスを作成
+            translator = Translator()
+
             for story in stories:
                 # タイトルの翻訳
                 if story.title:
-                    prompt = f"以下の英語のテキストを自然な日本語に翻訳してください。原文のニュアンスを保ちつつ、日本語として読みやすい文章にしてください。\n\n{story.title}"
-                    story.title = grok_client.generate_content(prompt=prompt, temperature=0.3)
+                    try:
+                        # 英語から日本語に翻訳
+                        translated = translator.translate(story.title, src='en', dest='ja')
+                        # Googletrans呼び出しをカウント
+                        counter.increment_googletrans("hacker_news")
+                        story.title = translated.text
+                    except Exception as e:
+                        print(f"Error translating title: {str(e)}")
                 
                 # 本文の翻訳
                 if story.text:
-                    # 長い本文は分割して翻訳
-                    if len(story.text) > 1000:
-                        chunks = [story.text[i:i+1000] for i in range(0, len(story.text), 1000)]
-                        translated_chunks = []
-                        
-                        for chunk in chunks:
-                            prompt = f"以下の英語のテキストを自然な日本語に翻訳してください。原文のニュアンスを保ちつつ、日本語として読みやすい文章にしてください。\n\n{chunk}"
-                            translated_chunk = grok_client.generate_content(prompt=prompt, temperature=0.3)
-                            translated_chunks.append(translated_chunk)
-                        
-                        story.text = "".join(translated_chunks)
-                    else:
-                        prompt = f"以下の英語のテキストを自然な日本語に翻訳してください。原文のニュアンスを保ちつつ、日本語として読みやすい文章にしてください。\n\n{story.text}"
-                        story.text = grok_client.generate_content(prompt=prompt, temperature=0.3)
+                    try:
+                        # 英語から日本語に翻訳
+                        translated = translator.translate(story.text, src='en', dest='ja')
+                        # Googletrans呼び出しをカウント
+                        counter.increment_googletrans("hacker_news")
+                        story.text = translated.text
+                    except Exception as e:
+                        print(f"Error translating text: {str(e)}")
         
         except Exception as e:
             print(f"Error translating stories: {str(e)}")

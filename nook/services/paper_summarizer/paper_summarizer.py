@@ -12,9 +12,10 @@ import requests
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-from nook.common.grok_client import Grok3Client
+from nook.common.gemini_client import GeminiClient
 from nook.common.storage import LocalStorage
-
+from googletrans import Translator
+from nook.common.counters import counter
 
 @dataclass
 class PaperInfo:
@@ -60,7 +61,7 @@ class PaperSummarizer:
             ストレージディレクトリのパス。
         """
         self.storage = LocalStorage(storage_dir)
-        self.grok_client = Grok3Client()
+        self.client = GeminiClient()
     
     def run(self, limit: int = 5) -> None:
         """
@@ -234,15 +235,13 @@ class PaperSummarizer:
             翻訳されたテキスト。
         """
         try:
-            prompt = f"以下の英語の学術論文のテキストを自然な日本語に翻訳してください。専門用語は適切に翻訳し、必要に応じて英語の専門用語を括弧内に残してください。\n\n{text}"
-            
-            translated_text = self.grok_client.generate_content(
-                prompt=prompt,
-                temperature=0.3,
-                max_tokens=1000
-            )
-            
-            return translated_text
+            # GoogletransのTranslatorインスタンスを作成
+            translator = Translator()
+            # 英語から日本語に翻訳
+            translated = translator.translate(text, src='en', dest='ja')
+            # Googletrans呼び出しをカウント
+            counter.increment_googletrans("paper_summarizer")
+            return translated.text
         except Exception as e:
             print(f"Error translating text: {str(e)}")
             return text  # 翻訳に失敗した場合は原文を返す
@@ -295,12 +294,14 @@ class PaperSummarizer:
         """
         
         try:
-            summary = self.grok_client.generate_content(
+            summary = self.client.generate_content(
                 prompt=prompt,
                 system_instruction=system_instruction,
                 temperature=0.3,
                 max_tokens=1000
             )
+            # LLM呼び出しをカウント
+            counter.increment_llm("paper_summarizer")
             paper_info.summary = summary
         except Exception as e:
             paper_info.summary = f"要約の生成中にエラーが発生しました: {str(e)}"

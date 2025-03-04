@@ -4,22 +4,8 @@
 general = [
     "",  # すべての言語
     "python",
-    "javascript",
-    "typescript",
-    "go",
-    "rust",
-    "c",
-    "cpp",
-    "java"
 ]
 
 # 特定の言語
 specific = [
-    "kotlin",
-    "swift",
-    "dart",
-    "ruby",
-    "php",
-    "csharp",
-    "julia"
 ] 

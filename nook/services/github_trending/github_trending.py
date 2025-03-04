@@ -10,8 +10,9 @@ import requests
 from bs4 import BeautifulSoup
 
 from nook.common.storage import LocalStorage
-from nook.common.grok_client import Grok3Client
-
+from nook.common.gemini_client import GeminiClient
+from googletrans import Translator
+from nook.common.counters import counter
 
 @dataclass
 class Repository:
@@ -164,18 +165,20 @@ class GithubTrending:
         List[tuple[str, List[Repository]]]
             翻訳されたリポジトリリスト。
         """
-        try:
-            # Grok APIクライアントの初期化
-            grok_client = Grok3Client()
-            
+        try:           
             for language, repositories in repositories_by_language:
                 for repo in repositories:
                     if repo.description:
-                        prompt = f"以下の英語のテキストを自然な日本語に翻訳してください。技術用語はそのままでも構いません。\n\n{repo.description}"
                         try:
-                            repo.description = grok_client.generate_content(prompt=prompt, temperature=0.3)
+                            # GoogletransのTranslatorインスタンスを作成
+                            translator = Translator()
+                            # 英語から日本語に翻訳
+                            translated = translator.translate(repo.description, src='en', dest='ja')
+                            # Googletrans呼び出しをカウント
+                            counter.increment_googletrans("github_trending")
+                            repo.description = translated.text
                         except Exception as e:
-                            print(f"Error translating description for {repo.name}: {str(e)}")
+                            print(f"Error translating text: {str(e)}")
         
         except Exception as e:
             print(f"Error in translation process: {str(e)}")

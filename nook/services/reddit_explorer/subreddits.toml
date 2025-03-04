@@ -5,6 +5,8 @@ tech = [
     "artificial",
     "compsci",
     "coding",
+    "MachineLearning",
+    "LocalLLaMA",
 ]
 
 # ニュース
