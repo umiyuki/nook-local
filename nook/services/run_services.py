@@ -20,6 +20,19 @@ from nook.services.reddit_explorer.reddit_explorer import RedditExplorer
 from nook.services.tech_feed.tech_feed import TechFeed
 from nook.services.paper_summarizer.paper_summarizer import PaperSummarizer
 from nook.services.fourchan_explorer.fourchan_explorer import FourChanExplorer
+from nook.services.fivechan_explorer.fivechan_explorer import FiveChanExplorer
+
+def run_fivechan_explorer():
+    """
+    5chanからのAI関連スレッド収集サービスを実行します。
+    """
+    print("5chanからAI関連スレッドを収集しています...")
+    try:
+        fivechan_explorer = FiveChanExplorer()
+        fivechan_explorer.run()
+        print("5chanからのAI関連スレッド収集が完了しました。")
+    except Exception as e:
+        print(f"5chanからのAI関連スレッド収集中にエラーが発生しました: {str(e)}")
 
 def run_fourchan_explorer():
     """
@@ -111,7 +124,7 @@ def main():
     parser.add_argument(
         "--service", 
         type=str,
-        choices=["all", "github", "hackernews", "reddit", "techfeed", "paper", "fourchan_explorer"],
+        choices=["all", "github", "hackernews", "reddit", "techfeed", "paper", "fourchan_explorer", "fivechan_explorer"],
         default="all",
         help="実行するサービス (デフォルト: all)"
     )
@@ -135,6 +148,9 @@ def main():
     
     if args.service == "all" or args.service == "fourchan_explorer":
         run_fourchan_explorer()
+
+    if args.service == "all" or args.service == "fivechan_explorer":
+        run_fivechan_explorer()
 
 if __name__ == "__main__":
     main() 

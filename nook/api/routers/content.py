@@ -17,7 +17,8 @@ SOURCE_MAPPING = {
     "github": "github_trending",
     "techfeed": "tech_feed",
     "paper": "paper_summarizer",
-    "4chan": "fourchan_explorer"
+    "4chan": "fourchan_explorer",
+    "5chan": "fivechan_explorer"
 }
 
 
@@ -124,6 +125,7 @@ def _get_source_display_name(source: str) -> str:
         "github": "GitHub Trending",
         "techfeed": "Tech Feed",
         "paper": "論文",
-        "4chan": "4chan"
+        "4chan": "4chan",
+        "5chan": "5ちゃんねる"
     }
     return source_names.get(source, source) 
