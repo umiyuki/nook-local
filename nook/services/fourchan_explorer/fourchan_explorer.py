@@ -318,4 +318,4 @@ class FourChanExplorer:
                 content += "---\n\n"
         
         # 保存
-        self.storage.save_markdown(content, "4chan_explorer", today)
+        self.storage.save_markdown(content, "fourchan_explorer", today)

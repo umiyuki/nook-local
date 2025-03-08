@@ -16,8 +16,8 @@ SOURCE_MAPPING = {
     "hackernews": "hacker_news",
     "github": "github_trending",
     "techfeed": "tech_feed",
-    "paper": "paper_summarizer"
-    "4chanai": "fourchan_explorer"
+    "paper": "paper_summarizer",
+    "4chan": "fourchan_explorer"
 }
 
 
@@ -123,7 +123,7 @@ def _get_source_display_name(source: str) -> str:
         "hackernews": "Hacker News",
         "github": "GitHub Trending",
         "techfeed": "Tech Feed",
-        "paper": "論文"
-        "4chanai": "4chan AI"
+        "paper": "論文",
+        "4chan": "4chan"
     }
     return source_names.get(source, source) 
