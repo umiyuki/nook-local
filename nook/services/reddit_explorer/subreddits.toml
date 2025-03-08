@@ -2,9 +2,8 @@
 
 # 技術関連
 tech = [
+    "StableDiffusion",
     "artificial",
-    "compsci",
-    "coding",
 ]
 
 # ニュース
