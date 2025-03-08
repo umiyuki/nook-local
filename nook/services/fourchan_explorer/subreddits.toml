@@ -1,0 +1,14 @@
+# サブレディット設定
+
+# 技術関連
+tech = [
+    "artificial",
+    "compsci",
+    "coding",
+]
+
+# ニュース
+news = [
+    "technology",
+    "Futurology",
+]

@@ -19,7 +19,19 @@ from nook.services.hacker_news.hacker_news import HackerNewsRetriever
 from nook.services.reddit_explorer.reddit_explorer import RedditExplorer
 from nook.services.tech_feed.tech_feed import TechFeed
 from nook.services.paper_summarizer.paper_summarizer import PaperSummarizer
-from nook.services.twitter_poster.twitter_poster import TwitterPoster
+from nook.services.fourchan_explorer.fourchan_explorer import FourChanExplorer
+
+def run_fourchan_explorer():
+    """
+    4chanからのAI関連スレッド収集サービスを実行します。
+    """
+    print("4chanからAI関連スレッドを収集しています...")
+    try:
+        fourchan_explorer = FourChanExplorer()
+        fourchan_explorer.run()
+        print("4chanからのAI関連スレッド収集が完了しました。")
+    except Exception as e:
+        print(f"4chanからのAI関連スレッド収集中にエラーが発生しました: {str(e)}")
 
 def run_github_trending():
     """
@@ -91,132 +103,6 @@ def run_paper_summarizer():
     except Exception as e:
         print(f"論文の収集・要約中にエラーが発生しました: {str(e)}")
 
-def run_twitter_poster():
-    """
-    Twitterポスターサービスを実行します。
-    """
-    print("収集した情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.run()
-        print("Xへの投稿が完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_github():
-    """
-    GitHub Trendingの情報をXにポストします。
-    """
-    print("GitHub Trendingの情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_github_trending()
-        print("GitHub Trendingの情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_hackernews():
-    """
-    Hacker Newsの情報をXにポストします。
-    """
-    print("Hacker Newsの情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_hacker_news()
-        print("Hacker Newsの情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_arxiv():
-    """
-    arXiv論文の情報をXにポストします。
-    """
-    print("arXiv論文の情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_arxiv_papers()
-        print("arXiv論文の情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_reddit():
-    """
-    Reddit記事の情報をXにポストします。
-    """
-    print("Reddit記事の情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_reddit_articles()
-        print("Reddit記事の情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_techfeed():
-    """
-    技術ブログ記事の情報をXにポストします。
-    """
-    print("技術ブログ記事の情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_tech_feed()
-        print("技術ブログ記事の情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
 def main():
     """
     コマンドライン引数に基づいて、指定されたサービスを実行します。
@@ -225,8 +111,7 @@ def main():
     parser.add_argument(
         "--service", 
         type=str,
-        choices=["all", "github", "hackernews", "reddit", "techfeed", "paper", "twitter", 
-                "twitter_github", "twitter_hackernews", "twitter_arxiv", "twitter_reddit", "twitter_techfeed"],
+        choices=["all", "github", "hackernews", "reddit", "techfeed", "paper", "fourchan_explorer"],
         default="all",
         help="実行するサービス (デフォルト: all)"
     )
@@ -248,24 +133,8 @@ def main():
     if args.service == "all" or args.service == "paper":
         run_paper_summarizer()
     
-    if args.service == "all" or args.service == "twitter":
-        run_twitter_poster()
-    
-    # 個別のTwitter投稿オプション
-    if args.service == "twitter_github":
-        run_twitter_github()
-    
-    if args.service == "twitter_hackernews":
-        run_twitter_hackernews()
-    
-    if args.service == "twitter_arxiv":
-        run_twitter_arxiv()
-    
-    if args.service == "twitter_reddit":
-        run_twitter_reddit()
-    
-    if args.service == "twitter_techfeed":
-        run_twitter_techfeed()
+    if args.service == "all" or args.service == "fourchan_explorer":
+        run_fourchan_explorer()
 
 if __name__ == "__main__":
     main() 

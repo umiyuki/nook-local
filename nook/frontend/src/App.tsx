@@ -5,7 +5,7 @@ import { Layout, RefreshCw, Menu, Calendar, Sun, Moon } from 'lucide-react';
 import { ContentCard } from './components/ContentCard';
 import { getContent } from './api';
 
-const sources = ['reddit', 'hackernews', 'github', 'techfeed', 'paper'];
+const sources = ['reddit', 'hackernews', 'github', 'techfeed', 'paper', '4chanai'];
 
 function App() {
   const [selectedSource, setSelectedSource] = useState('hackernews');
