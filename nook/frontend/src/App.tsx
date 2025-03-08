@@ -3,12 +3,13 @@ import { useQuery } from 'react-query';
 import { format, subDays } from 'date-fns';
 import { Layout, RefreshCw, Menu, Calendar, Sun, Moon } from 'lucide-react';
 import { ContentCard } from './components/ContentCard';
+import { WeatherWidget } from './components/WeatherWidget';
 import { getContent } from './api';
 
 const sources = ['paper', 'github', 'hacker news', 'tech news', 'business news', 'zenn', 'qiita', 'note', 'reddit', '4chan', '5chan'];
 
 function App() {
-  const [selectedSource, setSelectedSource] = useState('hackernews');
+  const [selectedSource, setSelectedSource] = useState('hacker news');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
@@ -44,6 +45,12 @@ function App() {
           <span className="text-xl font-bold text-gray-900 dark:text-white">Dashboard</span>
         </div>
       </div>
+      
+      {/* 天気ウィジェット */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <WeatherWidget />
+      </div>
+      
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2 mb-3">
           <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />

@@ -38,8 +38,8 @@ async def get_weather_data() -> WeatherResponse:
             # デモ用のダミーデータを返す
             return WeatherResponse(temperature=20.5, icon="01d")
         
-        # 東京の天気を取得
-        city = "Tokyo"
+        # 神奈川の天気を取得
+        city = "Kanagawa"
         url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
         
         response = requests.get(url)
