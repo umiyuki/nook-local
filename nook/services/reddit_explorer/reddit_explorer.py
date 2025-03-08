@@ -179,13 +179,13 @@ class RedditExplorer:
                 post_type = "link"
             
             # タイトルと本文を日本語に翻訳
-            title_ja = self._translate_to_japanese(submission.title)
+            title = submission.title
             text_ja = self._translate_to_japanese(submission.selftext) if submission.selftext else ""
             
             post = RedditPost(
                 type=post_type,
                 id=submission.id,
-                title=title_ja,
+                title=title,
                 url=submission.url if not submission.is_self else None,
                 upvotes=submission.score,
                 text=text_ja,
@@ -348,4 +348,4 @@ class RedditExplorer:
                     content += "---\n\n"
         
         # 保存
-        self.storage.save_markdown(content, "reddit_explorer", today) 
+        self.storage.save_markdown(content, "reddit_explorer", today)

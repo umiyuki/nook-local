@@ -205,11 +205,11 @@ class PaperSummarizer:
             contents = self._extract_body_text(paper)
             
             # タイトルとアブストラクトを日本語に翻訳
-            title_ja = self._translate_to_japanese(paper.title)
+            title = paper.title
             abstract_ja = self._translate_to_japanese(paper.summary)
             
             return PaperInfo(
-                title=title_ja,
+                title=title,
                 abstract=abstract_ja,
                 url=paper.entry_id,
                 contents=contents
