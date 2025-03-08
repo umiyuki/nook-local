@@ -163,11 +163,12 @@ class TechFeed:
         
         # 最新の記事を取得
         return recent_entries[:limit]
-    
+
+
     def _retrieve_article(self, entry: dict, feed_name: str, category: str) -> Optional[Article]:
         """
         記事を取得します。
-        
+    
         Parameters
         ----------
         entry : dict
@@ -176,7 +177,7 @@ class TechFeed:
             フィード名。
         category : str
             カテゴリ。
-            
+    
         Returns
         -------
         Article or None
@@ -187,24 +188,27 @@ class TechFeed:
             url = entry.link if hasattr(entry, "link") else None
             if not url:
                 return None
-            
+    
+            # ドメインをチェックして日本語ソースかどうかを判断
+            is_japanese_source = "zenn.dev" in url or "qiita.com" in url
+    
             # タイトルを取得
             title = entry.title if hasattr(entry, "title") else "無題"
-            
+    
             # 記事の内容を取得
             response = requests.get(url, timeout=10)
             if response.status_code != 200:
                 return None
-            
+    
             soup = BeautifulSoup(response.text, "html.parser")
-            
+    
             # 本文を抽出
             text = ""
-            
+    
             # まずはエントリの要約を使用
             if hasattr(entry, "summary"):
                 text = entry.summary
-            
+    
             # 次に記事の本文を抽出
             if not text:
                 # メタディスクリプションを取得
@@ -216,80 +220,102 @@ class TechFeed:
                     paragraphs = soup.find_all("p")
                     if paragraphs:
                         text = "\n".join([p.get_text() for p in paragraphs[:5]])
-            
-            # タイトルと本文を日本語に翻訳
-            title_ja = self._translate_to_japanese(title)
-            text_ja = self._translate_to_japanese(text)
-            
+    
+            # タイトルは原文のまま
+            # 本文は日本語ソースのものは翻訳せず、英語のものは翻訳
+            text_ja = self._translate_to_japanese(text, is_japanese_source)
+    
             return Article(
                 feed_name=feed_name,
-                title=title_ja,
+                title=title,  # タイトルは原文のまま
                 url=url,
                 text=text_ja,
                 soup=soup,
                 category=category
             )
-        
+    
         except Exception as e:
             print(f"Error retrieving article {entry.get('link', 'unknown')}: {str(e)}")
             return None
-    
-    def _translate_to_japanese(self, text: str) -> str:
+        
+    def _translate_to_japanese(self, text: str, is_japanese_source: bool = False) -> str:
         """
         テキストを日本語に翻訳します。
-        
+
         Parameters
         ----------
         text : str
             翻訳するテキスト。
-            
+        is_japanese_source : bool, default=False
+            ソースが日本語かどうか。
+
         Returns
         -------
         str
             翻訳されたテキスト。
         """
+        # 日本語ソースの場合は翻訳せずにそのまま返す
+        if is_japanese_source or not text:
+            return text
+
         try:
             prompt = f"以下の英語のテキストを自然な日本語に翻訳してください。技術用語は適切に翻訳し、必要に応じて英語の専門用語を括弧内に残してください。\n\n{text}"
-            
+
             translated_text = self.grok_client.generate_content(
                 prompt=prompt,
                 temperature=0.3,
                 max_tokens=1000
             )
-            
+
             return translated_text
         except Exception as e:
             print(f"Error translating text: {str(e)}")
             return text  # 翻訳に失敗した場合は原文を返す
-    
+
     def _summarize_article(self, article: Article) -> None:
         """
         記事を要約します。
-        
+
         Parameters
         ----------
         article : Article
             要約する記事。
         """
-        prompt = f"""
-        以下の技術ブログの記事を要約してください。
+        # 日本語ソースかどうかを判断
+        is_japanese_source = "zenn.dev" in article.url or "qiita.com" in article.url
 
-        タイトル: {article.title}
-        本文: {article.text[:2000]}
-        
-        要約は以下の形式で行い、日本語で回答してください:
-        1. 記事の主な内容（1-2文）
-        2. 重要なポイント（箇条書き3-5点）
-        3. 技術的な洞察
-        """
-        
+        if is_japanese_source:
+            prompt = f"""
+            以下の技術ブログの記事を要約してください。
+
+            タイトル: {article.title}
+            本文: {article.text[:2000]}
+
+            要約は以下の形式で行い、日本語で回答してください:
+            1. 記事の主な内容（1-2文）
+            2. 重要なポイント（箇条書き3-5点）
+            3. 技術的な洞察
+            """
+        else:
+            prompt = f"""
+            以下の技術ブログの記事を要約してください。
+
+            タイトル: {article.title}
+            本文: {article.text[:2000]}
+
+            要約は以下の形式で行い、日本語で回答してください:
+            1. 記事の主な内容（1-2文）
+            2. 重要なポイント（箇条書き3-5点）
+            3. 技術的な洞察
+            """
+
         system_instruction = """
         あなたは技術ブログの記事の要約を行うアシスタントです。
         与えられた記事を分析し、簡潔で情報量の多い要約を作成してください。
         技術的な内容は正確に、一般的な内容は分かりやすく要約してください。
         回答は必ず日本語で行ってください。専門用語は適切に翻訳し、必要に応じて英語の専門用語を括弧内に残してください。
         """
-        
+
         try:
             summary = self.grok_client.generate_content(
                 prompt=prompt,
@@ -300,11 +326,11 @@ class TechFeed:
             article.summary = summary
         except Exception as e:
             article.summary = f"要約の生成中にエラーが発生しました: {str(e)}"
-    
+
     def _store_summaries(self, articles: List[Article]) -> None:
         """
         要約を保存します。
-        
+    
         Parameters
         ----------
         articles : List[Article]
@@ -313,28 +339,29 @@ class TechFeed:
         if not articles:
             print("保存する記事がありません")
             return
-        
+    
         today = datetime.now()
         content = f"# 技術ブログ記事 ({today.strftime('%Y-%m-%d')})\n\n"
-        
+    
         # カテゴリごとに整理
         categories = {}
         for article in articles:
             if article.category not in categories:
                 categories[article.category] = []
-            
+    
             categories[article.category].append(article)
-        
+    
         # Markdownを生成
         for category, category_articles in categories.items():
             content += f"## {category.replace('_', ' ').capitalize()}\n\n"
-            
+    
             for article in category_articles:
                 content += f"### [{article.title}]({article.url})\n\n"
                 content += f"**フィード**: {article.feed_name}\n\n"
                 content += f"**要約**:\n{article.summary}\n\n"
+    
                 content += "---\n\n"
-        
+    
         # 保存
         print(f"tech_feed ディレクトリに保存します: {today.strftime('%Y-%m-%d')}.md")
         try:
@@ -346,10 +373,11 @@ class TechFeed:
             try:
                 tech_feed_dir = Path(self.storage.base_dir) / "tech_feed"
                 tech_feed_dir.mkdir(parents=True, exist_ok=True)
-                
+    
                 file_path = tech_feed_dir / f"{today.strftime('%Y-%m-%d')}.md"
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 print(f"再試行で保存に成功しました: {file_path}")
             except Exception as e2:
-                print(f"再試行でも保存に失敗しました: {str(e2)}") 
+                print(f"再試行でも保存に失敗しました: {str(e2)}")
+    
