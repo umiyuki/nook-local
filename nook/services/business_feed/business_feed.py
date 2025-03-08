@@ -1,4 +1,4 @@
-"""技術ニュースのRSSフィードを監視・収集・要約するサービス。"""
+"""ビジネスニュースのRSSフィードを監視・収集・要約するサービス。"""
 
 import tomli
 from dataclasses import dataclass, field
@@ -17,7 +17,7 @@ from nook.common.storage import LocalStorage
 @dataclass
 class Article:
     """
-    技術ニュースの記事情報。
+    ビジネスニュースの記事情報。
     
     Parameters
     ----------
@@ -44,9 +44,9 @@ class Article:
     summary: str = field(default="")
 
 
-class TechFeed:
+class BusinessFeed:
     """
-    技術ニュースのRSSフィードを監視・収集・要約するクラス。
+    ビジネスニュースのRSSフィードを監視・収集・要約するクラス。
     
     Parameters
     ----------
@@ -73,7 +73,7 @@ class TechFeed:
     
     def run(self, days: int = 1, limit: int = 30) -> None:
         """
-        技術ニュースのRSSフィードを監視・収集・要約して保存します。
+        ビジネスニュースのRSSフィードを監視・収集・要約して保存します。
         
         Parameters
         ----------
@@ -107,7 +107,7 @@ class TechFeed:
                             all_articles.append(article)
                 
                 except Exception as e:
-                    print(f"Error processing feed {feed_url}: {str(e)}")
+                    print(f"フィード {feed_url} の処理中にエラーが発生しました: {str(e)}")
         
         print(f"合計 {len(all_articles)} 件の記事を取得しました")
         
@@ -235,7 +235,7 @@ class TechFeed:
             )
     
         except Exception as e:
-            print(f"Error retrieving article {entry.get('link', 'unknown')}: {str(e)}")
+            print(f"記事 {entry.get('link', '不明')} の取得中にエラーが発生しました: {str(e)}")
             return None
             
     def _detect_japanese_content(self, soup, title, entry) -> bool:
@@ -310,8 +310,8 @@ class TechFeed:
             return True
             
         # 方法5: 特定の日本語サイトのドメインリスト（バックアップとして）
-        japanese_domains = ["zenn.dev", "qiita.com", "gihyo.jp", "codezine.jp", 
-                          "techplay.jp", "itmedia.co.jp", "atmarkit.co.jp"]
+        japanese_domains = ["nikkei.com", "toyokeizai.net", "businessinsider.jp", "bloomberg.co.jp", 
+                          "reuters.co.jp", "diamond.jp", "jbpress.co.jp", "president.jp"]
         
         url = entry.link if hasattr(entry, "link") else ""
         for domain in japanese_domains:
@@ -331,7 +331,7 @@ class TechFeed:
             要約する記事。
         """
         prompt = f"""
-        以下の技術ニュースの記事を要約してください。
+        以下のビジネスニュースの記事を要約してください。
 
         タイトル: {article.title}
         本文: {article.text[:2000]}
@@ -339,13 +339,13 @@ class TechFeed:
         要約は以下の形式で行い、日本語で回答してください:
         1. 記事の主な内容（1-2文）
         2. 重要なポイント（箇条書き3-5点）
-        3. 技術的な洞察
+        3. ビジネスインパクト
         """
 
         system_instruction = """
-        あなたは技術ニュースの記事の要約を行うアシスタントです。
+        あなたはビジネスニュースの記事の要約を行うアシスタントです。
         与えられた記事を分析し、簡潔で情報量の多い要約を作成してください。
-        技術的な内容は正確に、一般的な内容は分かりやすく要約してください。
+        経済・ビジネス用語は正確に、一般的な内容は分かりやすく要約してください。
         回答は必ず日本語で行ってください。
         """
 
@@ -374,7 +374,7 @@ class TechFeed:
             return
     
         today = datetime.now()
-        content = f"# 技術ニュース記事 ({today.strftime('%Y-%m-%d')})\n\n"
+        content = f"# ビジネスニュース記事 ({today.strftime('%Y-%m-%d')})\n\n"
     
         # カテゴリごとに整理
         categories = {}
@@ -396,18 +396,18 @@ class TechFeed:
                 content += "---\n\n"
     
         # 保存
-        print(f"tech_feed ディレクトリに保存します: {today.strftime('%Y-%m-%d')}.md")
+        print(f"business_feed ディレクトリに保存します: {today.strftime('%Y-%m-%d')}.md")
         try:
-            self.storage.save_markdown(content, "tech_feed", today)
+            self.storage.save_markdown(content, "business_feed", today)
             print("保存が完了しました")
         except Exception as e:
             print(f"保存中にエラーが発生しました: {str(e)}")
             # ディレクトリを作成して再試行
             try:
-                tech_feed_dir = Path(self.storage.base_dir) / "tech_feed"
-                tech_feed_dir.mkdir(parents=True, exist_ok=True)
+                business_feed_dir = Path(self.storage.base_dir) / "business_feed"
+                business_feed_dir.mkdir(parents=True, exist_ok=True)
     
-                file_path = tech_feed_dir / f"{today.strftime('%Y-%m-%d')}.md"
+                file_path = business_feed_dir / f"{today.strftime('%Y-%m-%d')}.md"
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 print(f"再試行で保存に成功しました: {file_path}")

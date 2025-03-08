@@ -1,10 +1,10 @@
-"""技術ニュースのRSSフィードを監視・収集・要約するサービス。"""
+"""ZennのRSSフィードを監視・収集・要約するサービス。"""
 
 import tomli
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Union
 
 import feedparser
 import requests
@@ -17,7 +17,7 @@ from nook.common.storage import LocalStorage
 @dataclass
 class Article:
     """
-    技術ニュースの記事情報。
+    Zenn記事の情報。
     
     Parameters
     ----------
@@ -44,9 +44,9 @@ class Article:
     summary: str = field(default="")
 
 
-class TechFeed:
+class ZennExplorer:
     """
-    技術ニュースのRSSフィードを監視・収集・要約するクラス。
+    ZennのRSSフィードを監視・収集・要約するクラス。
     
     Parameters
     ----------
@@ -54,9 +54,15 @@ class TechFeed:
         ストレージディレクトリのパス。
     """
     
+    # 限度値を無視するフィードのURL
+    UNLIMITED_FEEDS = [
+        "https://zenn.dev/topics/stablediffusion/feed",
+        "https://zenn.dev/topics/画像生成/feed",
+    ]
+    
     def __init__(self, storage_dir: str = "data"):
         """
-        TechFeedを初期化します。
+        ZennExplorerを初期化します。
         
         Parameters
         ----------
@@ -71,9 +77,9 @@ class TechFeed:
         with open(script_dir / "feed.toml", "rb") as f:
             self.feed_config = tomli.load(f)
     
-    def run(self, days: int = 1, limit: int = 30) -> None:
+    def run(self, days: int = 1, limit: int = 3) -> None:
         """
-        技術ニュースのRSSフィードを監視・収集・要約して保存します。
+        ZennのRSSフィードを監視・収集・要約して保存します。
         
         Parameters
         ----------
@@ -94,8 +100,13 @@ class TechFeed:
                     feed = feedparser.parse(feed_url)
                     feed_name = feed.feed.title if hasattr(feed, "feed") and hasattr(feed.feed, "title") else feed_url
                     
+                    # 特定のフィードの場合は制限を解除
+                    current_limit = None if feed_url in self.UNLIMITED_FEEDS else limit
+                    if feed_url in self.UNLIMITED_FEEDS:
+                        print(f"フィード {feed_url} は制限なしで取得します")
+                    
                     # 新しいエントリをフィルタリング
-                    entries = self._filter_entries(feed.entries, days, limit)
+                    entries = self._filter_entries(feed.entries, days, current_limit)
                     print(f"フィード {feed_name} から {len(entries)} 件のエントリを取得しました")
                     
                     for entry in entries:
@@ -107,7 +118,7 @@ class TechFeed:
                             all_articles.append(article)
                 
                 except Exception as e:
-                    print(f"Error processing feed {feed_url}: {str(e)}")
+                    print(f"フィード {feed_url} の処理中にエラーが発生しました: {str(e)}")
         
         print(f"合計 {len(all_articles)} 件の記事を取得しました")
         
@@ -118,7 +129,7 @@ class TechFeed:
         else:
             print("保存する記事がありません")
     
-    def _filter_entries(self, entries: List[dict], days: int, limit: int) -> List[dict]:
+    def _filter_entries(self, entries: List[dict], days: int, limit: Optional[int] = None) -> List[dict]:
         """
         新しいエントリをフィルタリングします。
         
@@ -128,8 +139,8 @@ class TechFeed:
             エントリのリスト。
         days : int
             何日前までの記事を取得するか。
-        limit : int
-            取得する記事数。
+        limit : Optional[int], default=None
+            取得する記事数。Noneの場合は全て取得。
             
         Returns
         -------
@@ -161,7 +172,10 @@ class TechFeed:
         
         print(f"フィルタリング後のエントリ数: {len(recent_entries)}")
         
-        # 最新の記事を取得
+        # limitがNoneの場合は全てのエントリを返す
+        if limit is None:
+            return recent_entries
+        # そうでなければ指定された数だけ返す
         return recent_entries[:limit]
 
 
@@ -199,13 +213,6 @@ class TechFeed:
     
             soup = BeautifulSoup(response.text, "html.parser")
     
-            # 日本語記事かどうかを判定
-            is_japanese = self._detect_japanese_content(soup, title, entry)
-            
-            if not is_japanese:
-                print(f"日本語でない記事をスキップします: {title}")
-                return None
-                
             # 本文を抽出
             text = ""
     
@@ -235,91 +242,8 @@ class TechFeed:
             )
     
         except Exception as e:
-            print(f"Error retrieving article {entry.get('link', 'unknown')}: {str(e)}")
+            print(f"記事 {entry.get('link', '不明')} の取得中にエラーが発生しました: {str(e)}")
             return None
-            
-    def _detect_japanese_content(self, soup, title, entry) -> bool:
-        """
-        記事が日本語であるかどうかを判定します。
-        
-        Parameters
-        ----------
-        soup : BeautifulSoup
-            記事のHTMLパーサー。
-        title : str
-            記事のタイトル。
-        entry : dict
-            エントリ情報。
-            
-        Returns
-        -------
-        bool
-            日本語記事であればTrue、そうでなければFalse。
-        """
-        # 方法1: HTMLのlang属性をチェック
-        html_tag = soup.find("html")
-        if html_tag and html_tag.get("lang"):
-            lang = html_tag.get("lang").lower()
-            if lang.startswith("ja") or lang == "jp":
-                return True
-                
-        # 方法2: meta タグの言語情報をチェック
-        meta_lang = soup.find("meta", attrs={"http-equiv": "content-language"})
-        if meta_lang and meta_lang.get("content"):
-            if meta_lang.get("content").lower().startswith("ja"):
-                return True
-        
-        # 方法3: 日本語の文字コードパターンをチェック
-        # ひらがな、カタカナ、漢字の文字コード範囲
-        hiragana_pattern = range(0x3040, 0x309F)
-        katakana_pattern = range(0x30A0, 0x30FF)
-        kanji_pattern = range(0x4E00, 0x9FBF)
-        
-        # タイトルをチェック
-        japanese_chars_count = 0
-        for char in title:
-            code = ord(char)
-            if code in hiragana_pattern or code in katakana_pattern or code in kanji_pattern:
-                japanese_chars_count += 1
-                
-        if japanese_chars_count > 2:  # 複数の日本語文字があれば日本語とみなす
-            return True
-            
-        # 方法4: サマリーやディスクリプションもチェック
-        text_to_check = ""
-        if hasattr(entry, "summary"):
-            text_to_check += entry.summary
-            
-        meta_desc = soup.find("meta", attrs={"name": "description"})
-        if meta_desc and meta_desc.get("content"):
-            text_to_check += meta_desc.get("content")
-            
-        # 最初の段落をサンプリング
-        paragraphs = soup.find_all("p")
-        if paragraphs and len(paragraphs) > 0:
-            text_to_check += paragraphs[0].get_text()
-            
-        # サンプリングしたテキストで日本語文字をチェック
-        japanese_chars_count = 0
-        for char in text_to_check[:100]:  # 最初の100文字だけチェック
-            code = ord(char)
-            if code in hiragana_pattern or code in katakana_pattern or code in kanji_pattern:
-                japanese_chars_count += 1
-                
-        if japanese_chars_count > 5:  # 複数の日本語文字があれば日本語とみなす
-            return True
-            
-        # 方法5: 特定の日本語サイトのドメインリスト（バックアップとして）
-        japanese_domains = ["zenn.dev", "qiita.com", "gihyo.jp", "codezine.jp", 
-                          "techplay.jp", "itmedia.co.jp", "atmarkit.co.jp"]
-        
-        url = entry.link if hasattr(entry, "link") else ""
-        for domain in japanese_domains:
-            if domain in url:
-                return True
-                
-        # デフォルトでは非日本語と判定
-        return False
 
     def _summarize_article(self, article: Article) -> None:
         """
@@ -331,7 +255,7 @@ class TechFeed:
             要約する記事。
         """
         prompt = f"""
-        以下の技術ニュースの記事を要約してください。
+        以下のZenn記事を要約してください。
 
         タイトル: {article.title}
         本文: {article.text[:2000]}
@@ -343,7 +267,7 @@ class TechFeed:
         """
 
         system_instruction = """
-        あなたは技術ニュースの記事の要約を行うアシスタントです。
+        あなたはZennの技術記事の要約を行うアシスタントです。
         与えられた記事を分析し、簡潔で情報量の多い要約を作成してください。
         技術的な内容は正確に、一般的な内容は分かりやすく要約してください。
         回答は必ず日本語で行ってください。
@@ -374,7 +298,7 @@ class TechFeed:
             return
     
         today = datetime.now()
-        content = f"# 技術ニュース記事 ({today.strftime('%Y-%m-%d')})\n\n"
+        content = f"# Zenn記事 ({today.strftime('%Y-%m-%d')})\n\n"
     
         # カテゴリごとに整理
         categories = {}
@@ -396,18 +320,18 @@ class TechFeed:
                 content += "---\n\n"
     
         # 保存
-        print(f"tech_feed ディレクトリに保存します: {today.strftime('%Y-%m-%d')}.md")
+        print(f"zenn_explorer ディレクトリに保存します: {today.strftime('%Y-%m-%d')}.md")
         try:
-            self.storage.save_markdown(content, "tech_feed", today)
+            self.storage.save_markdown(content, "zenn_explorer", today)
             print("保存が完了しました")
         except Exception as e:
             print(f"保存中にエラーが発生しました: {str(e)}")
             # ディレクトリを作成して再試行
             try:
-                tech_feed_dir = Path(self.storage.base_dir) / "tech_feed"
-                tech_feed_dir.mkdir(parents=True, exist_ok=True)
+                zenn_explorer_dir = Path(self.storage.base_dir) / "zenn_explorer"
+                zenn_explorer_dir.mkdir(parents=True, exist_ok=True)
     
-                file_path = tech_feed_dir / f"{today.strftime('%Y-%m-%d')}.md"
+                file_path = zenn_explorer_dir / f"{today.strftime('%Y-%m-%d')}.md"
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 print(f"再試行で保存に成功しました: {file_path}")

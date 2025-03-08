@@ -1,0 +1,7 @@
+# フィード設定
+bussiness = [
+    "https://business.nikkei.com/rss/sns/nb.rdf",
+    "https://www.businessinsider.jp/feed/index.xml",
+    "https://xtech.nikkei.com/rss/xtech-it.rdf",
+    "https://rss.itmedia.co.jp/rss/2.0/aiplus.xml",
+ ]

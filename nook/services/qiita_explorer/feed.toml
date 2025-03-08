@@ -1,0 +1,10 @@
+# フィード設定
+
+qitta = [
+    "https://qiita.com/popular-items/feed.atom",
+    "https://qiita.com/tags/stablediffusion/feed.atom",
+    "https://qiita.com/tags/画像生成/feed.atom",
+    "https://qiita.com/tags/生成ai/feed.atom",
+    "https://qiita.com/tags/ai/feed.atom",
+    "https://qiita.com/tags/llm/feed.atom",
+]

@@ -9,7 +9,16 @@ tech_blogs = [
     "https://aws.amazon.com/blogs/aws/feed/",
     "https://devblogs.microsoft.com/python/feed/",
     "https://blog.twitter.com/engineering/en_us/blog.rss",
-    "https://medium.com/feed/airbnb-engineering"
+    "https://medium.com/feed/airbnb-engineering",
+    "https://www.techno-edge.net/rss20/index.rdf",
+]
+
+# はてなブックマーク
+hatena = [
+    # テクノロジーの中で人気のもの
+    "https://b.hatena.ne.jp/hotentry/it.rss",
+    # aiで検索して5ユーザがブックマークをして新着でソートしたもの
+    "https://b.hatena.ne.jp/q/ai?users=5&sort=recent&mode=rss",
 ]
 
 # AI/ML関連
@@ -23,27 +32,9 @@ ai_ml = [
 
 # プログラミング言語
 programming = [
-    "https://blog.rust-lang.org/feed.xml",
     "https://blog.python.org/feeds/posts/default",
-    "https://go.dev/blog/feed.atom",
-    "https://blog.jetbrains.com/kotlin/feed/",
-    "https://blog.typescriptlang.org/feed/feed.xml"
-]
-
-zenn = [
-    "https://zenn.dev/topics/cursor/feed",
-    "https://zenn.dev/topics/cline/feed",
-    "https://zenn.dev/topics/langchain/feed",
-    "https://zenn.dev/topics/mcp/feed",
-    "https://zenn.dev/topics/ai駆動開発/feed"
-]
-
-qitta = [
-    "http://qiita.com/tags/AI/feed.atom",
-    "http://qiita.com/tags/Cursor/feed.atom",
-    "http://qiita.com/tags/LangChain/feed.atom",
-    "http://qiita.com/tags/Cline/feed.atom",
-    "http://qiita.com/tags/LLM/feed.atom",
-    "http://qiita.com/tags/AI駆動開発/feed.atom",
-    "http://qiita.com/tags/mcp/feed.atom"
+    # "https://blog.rust-lang.org/feed.xml",
+    # "https://go.dev/blog/feed.atom",
+    # "https://blog.jetbrains.com/kotlin/feed/",
+    # "https://blog.typescriptlang.org/feed/feed.xml"
 ]

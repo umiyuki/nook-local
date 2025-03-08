@@ -17,7 +17,11 @@ from nook.services.github_trending.github_trending import GithubTrending
 # 他のサービスをインポート（クラス名を修正）
 from nook.services.hacker_news.hacker_news import HackerNewsRetriever
 from nook.services.reddit_explorer.reddit_explorer import RedditExplorer
+from nook.services.zenn_explorer.zenn_explorer import ZennExplorer
+from nook.services.qiita_explorer.qiita_explorer import QiitaExplorer
+from nook.services.note_explorer.note_explorer import NoteExplorer
 from nook.services.tech_feed.tech_feed import TechFeed
+from nook.services.business_feed.business_feed import BusinessFeed
 from nook.services.paper_summarizer.paper_summarizer import PaperSummarizer
 from nook.services.fourchan_explorer.fourchan_explorer import FourChanExplorer
 from nook.services.fivechan_explorer.fivechan_explorer import FiveChanExplorer
@@ -68,6 +72,42 @@ def run_hacker_news():
     except Exception as e:
         print(f"Hacker News記事の収集中にエラーが発生しました: {str(e)}")
 
+def run_note_explorer():
+    """
+    Noteエクスプローラーサービスを実行します。
+    """
+    print("Note投稿を収集しています...")
+    try:
+        note_explorer = NoteExplorer()
+        note_explorer.run()
+        print("Note投稿の収集が完了しました。")
+    except Exception as e:
+        print(f"Note投稿の収集中にエラーが発生しました: {str(e)}")
+
+def run_zenn_explorer():
+    """
+    Zennエクスプローラーサービスを実行します。
+    """
+    print("Zenn投稿を収集しています...")
+    try:
+        zenn_explorer = ZennExplorer()
+        zenn_explorer.run()
+        print("zenn投稿の収集が完了しました。")
+    except Exception as e:
+        print(f"zenn投稿の収集中にエラーが発生しました: {str(e)}")
+
+def run_qiita_explorer():
+    """
+    Qiitaエクスプローラーサービスを実行します。
+    """
+    print("Qiita投稿を収集しています...")
+    try:
+        qiita_explorer = QiitaExplorer()
+        qiita_explorer.run()
+        print("qiita投稿の収集が完了しました。")
+    except Exception as e:
+        print(f"qiita投稿の収集中にエラーが発生しました: {str(e)}")
+
 def run_reddit_explorer():
     """
     Redditエクスプローラーサービスを実行します。
@@ -98,6 +138,18 @@ def run_tech_feed():
     except Exception as e:
         print(f"技術ブログのフィード収集中にエラーが発生しました: {str(e)}")
 
+def run_business_feed():
+    """
+    ビジネスフィードサービスを実行します。
+    """
+    print("ビジネス記事のフィードを収集しています...")
+    try:
+        business_feed = BusinessFeed()
+        business_feed.run()
+        print("ビジネス記事のフィードの収集が完了しました。")
+    except Exception as e:
+        print(f"ビジネス記事のフィード収集中にエラーが発生しました: {str(e)}")
+
 def run_paper_summarizer():
     """
     論文要約サービスを実行します。
@@ -124,7 +176,7 @@ def main():
     parser.add_argument(
         "--service", 
         type=str,
-        choices=["all", "github", "hackernews", "reddit", "techfeed", "paper", "fourchan_explorer", "fivechan_explorer"],
+        choices=["all", "paper", "github", "hacker_news", "tech_news", "business_news", "zenn", "qiita", "note", "reddit", "4chan", "5chan"],
         default="all",
         help="実行するサービス (デフォルト: all)"
     )
@@ -139,17 +191,29 @@ def main():
     
     if args.service == "all" or args.service == "reddit":
         run_reddit_explorer()
+
+    if args.service == "all" or args.service == "qiita":
+        run_qiita_explorer()
+
+    if args.service == "all" or args.service == "zenn":
+        run_zenn_explorer()
+
+    if args.service == "all" or args.service == "note":
+        run_note_explorer()
     
     if args.service == "all" or args.service == "techfeed":
         run_tech_feed()
+
+    if args.service == "all" or args.service == "businessfeed":
+        run_business_feed()
     
     if args.service == "all" or args.service == "paper":
         run_paper_summarizer()
     
-    if args.service == "all" or args.service == "fourchan_explorer":
+    if args.service == "all" or args.service == "4chan":
         run_fourchan_explorer()
 
-    if args.service == "all" or args.service == "fivechan_explorer":
+    if args.service == "all" or args.service == "5chan":
         run_fivechan_explorer()
 
 if __name__ == "__main__":

@@ -12,11 +12,15 @@ router = APIRouter()
 storage = LocalStorage("data")
 
 SOURCE_MAPPING = {
-    "reddit": "reddit_explorer",
-    "hackernews": "hacker_news",
-    "github": "github_trending",
-    "techfeed": "tech_feed",
     "paper": "paper_summarizer",
+    "github": "github_trending",
+    "hacker news": "hacker_news",
+    "tech news": "tech_feed",
+    "business news": "business_feed",
+    "zenn": "zenn_explorer",
+    "qiita": "qiita_explorer",
+    "note": "note_explorer",
+    "reddit": "reddit_explorer",
     "4chan": "fourchan_explorer",
     "5chan": "fivechan_explorer"
 }
@@ -124,6 +128,7 @@ def _get_source_display_name(source: str) -> str:
         "hackernews": "Hacker News",
         "github": "GitHub Trending",
         "techfeed": "Tech Feed",
+        "businessfeed": "Business Feed",
         "paper": "論文",
         "4chan": "4chan",
         "5chan": "5ちゃんねる"
