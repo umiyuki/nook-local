@@ -149,16 +149,16 @@ class GithubTrending:
         except Exception as e:
             print(f"Error retrieving repositories for language {language}: {str(e)}")
             return []
-    
+
     def _translate_repositories(self, repositories_by_language: List[tuple[str, List[Repository]]]) -> List[tuple[str, List[Repository]]]:
         """
         リポジトリの説明を日本語に翻訳します。
-        
+
         Parameters
         ----------
         repositories_by_language : List[tuple[str, List[Repository]]]
             言語ごとのリポジトリリスト。
-            
+
         Returns
         -------
         List[tuple[str, List[Repository]]]
@@ -167,19 +167,30 @@ class GithubTrending:
         try:
             # Grok APIクライアントの初期化
             grok_client = Grok3Client()
-            
+
             for language, repositories in repositories_by_language:
                 for repo in repositories:
                     if repo.description:
-                        prompt = f"以下の英語のテキストを自然な日本語に翻訳してください。技術用語はそのままでも構いません。\n\n{repo.description}"
+                        prompt = f"""以下の英語のテキストを詳細かつ情報量の多い日本語に翻訳してください。
+                        技術用語や固有名詞は適切に翻訳し、専門的な内容が正確に伝わるようにしてください。
+                        必要に応じて、英語の専門用語を括弧内に残しても構いません。
+                        単なる直訳ではなく、内容を十分に詳しく説明してください。
+
+                        対象テキスト:
+                        {repo.description}
+                        """
                         try:
-                            repo.description = grok_client.generate_content(prompt=prompt, temperature=0.3)
+                            repo.description = grok_client.generate_content(
+                                prompt=prompt,
+                                temperature=0.3,
+                                max_tokens=1000  # max_tokensを追加
+                            )
                         except Exception as e:
                             print(f"Error translating description for {repo.name}: {str(e)}")
-        
+
         except Exception as e:
             print(f"Error in translation process: {str(e)}")
-        
+
         return repositories_by_language
     
     def _store_summaries(self, repositories_by_language: List[tuple[str, List[Repository]]]) -> None:
