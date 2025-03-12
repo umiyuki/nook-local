@@ -1,0 +1,10 @@
+# フィード設定
+
+zenn = [
+    "https://zenn.dev/feed",
+    "https://zenn.dev/topics/stablediffusion/feed",
+    "https://zenn.dev/topics/画像生成/feed",
+    "https://zenn.dev/topics/生成ai/feed",
+    "https://zenn.dev/topics/ai/feed",
+    "https://zenn.dev/topics/llm/feed",
+]

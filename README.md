@@ -9,7 +9,7 @@ Discus0434氏の[Nook](https://github.com/discus0434/nook)をベースに、
 - 取得した記事をローカルストレージの~/nook/data/に保存
 - 生成AIのAPIを変更(GeminiからGrok3 APIに変更)
 - 天気APIを追加(OpenWeatherMap API)
-- フロントエンドを追加(Streamlit)
+- フロントエンドを追加(React + Vite)
 - バックエンドを追加(FastAPI)
 - サービスを追加(GitHub Trending、Hacker News、Tech Feed、arXiv論文)
 - 取得した記事をすべて日本語に変換
@@ -18,7 +18,10 @@ Discus0434氏の[Nook](https://github.com/discus0434/nook)をベースに、
 - チャット機能は実装されていません。
 
 ## 画面イメージ
-![画面イメージ](assets/screenshots/streamlit-screenshot.png)
+### ダークモード
+![画面イメージ](assets/screenshots/dark-screenshot.png)
+### ライトモード
+![画面イメージ](assets/screenshots/white-screenshot.png)
 
 ## 機能
 
@@ -29,8 +32,6 @@ Discus0434氏の[Nook](https://github.com/discus0434/nook)をベースに、
   - 技術ブログのRSSフィード
   - arXiv論文
 - 日付ごとのコンテンツフィルタリング
-- 天気情報の表示
-- コンテンツに関するチャット機能
 
 ## アーキテクチャ
 
@@ -38,13 +39,10 @@ Nookは以下のコンポーネントで構成されています：
 
 1. **バックエンド（FastAPI）**
    - コンテンツAPI
-   - 天気API
-   - チャットAPI
 
-2. **フロントエンド（Streamlit）**
+2. **フロントエンド（React + Vite）**
    - サイドバー（ソース選択、日付選択、天気表示）
    - コンテンツビューア
-   - チャットインターフェース
 
 3. **サービス**
    - Reddit Explorer：Redditの人気投稿を収集・要約
@@ -55,14 +53,61 @@ Nookは以下のコンポーネントで構成されています：
    - ローカルストレージ：収集したデータの保存
    - Grok3 APIクライアント：テキスト生成・要約
 
-## セットアップ
+## Dockerを使用したセットアップ
+
+### 前提条件
+
+- Docker
+- Docker Compose
+
+### 環境変数の設定
+
+```bash
+# .envファイルの作成
+cp .env.example .env
+
+# .envファイルを編集して必要なAPIキーを設定
+```
+
+### Dockerでの実行（本番環境）
+
+```bash
+# コンテナのビルドと起動
+docker-compose up -d
+
+# フロントエンドは http://localhost:5173 でアクセス可能
+# バックエンドは http://localhost:8000 でアクセス可能
+```
+
+### Dockerでの実行（開発環境）
+
+```bash
+# 開発用コンテナのビルドと起動
+docker-compose -f docker-compose.dev.yaml up -d
+
+# フロントエンドは http://localhost:5173 でアクセス可能
+# バックエンドは http://localhost:8000 でアクセス可能
+```
+
+### コンテナの停止
+
+```bash
+# 本番環境
+docker-compose down
+
+# 開発環境
+docker-compose -f docker-compose.dev.yaml down
+```
+
+## 通常のセットアップ
 
 ### 前提条件
 
 - Python 3.10以上
+- Node.js 18以上
+- npm または yarn
 - 以下のAPIキー：
-  - OpenWeatherMap APIキー（天気機能用）
-  - Grok3 APIキー（チャット・要約機能用）
+  - Grok APIキー（チャット・要約機能用）
   - Reddit API認証情報（Reddit Explorer用）
 
 ### インストール
@@ -72,10 +117,16 @@ Nookは以下のコンポーネントで構成されています：
 git clone https://github.com/Tomatio13/nook.git
 cd nook
 
-# 依存関係のインストール
+# バックエンド依存関係のインストール
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# フロントエンド依存関係のインストール
+cd nook/frontend
+npm install
+# または
+yarn install
 
 # 環境変数の設定
 cp .env.example .env
@@ -98,8 +149,13 @@ python -m nook.api.run
 uvicorn nook.api.main:app --reload
 
 # フロントエンドの起動（別ターミナルで）
-python -m streamlit run nook/frontend/app.py
+cd nook/frontend
+npm run dev
+# または
+yarn dev
 ```
+
+フロントエンドは通常 http://localhost:5173 で実行されます。
 
 ## 情報の取得手順
 
@@ -144,9 +200,11 @@ nook/
 ├── common/               # 共通ユーティリティ
 │   ├── storage.py        # ローカルストレージ
 │   └── grok_client.py    # Grok3 APIクライアント
-├── frontend/             # Streamlit フロントエンド
-│   ├── components/       # UIコンポーネント
-│   └── utils/            # ユーティリティ
+├── frontend/             # React + Vite フロントエンド
+│   ├── src/              # ソースコード
+│   │   ├── components/   # UIコンポーネント
+│   │   └── api/          # APIクライアント
+│   └── public/           # 静的ファイル
 └── services/             # サービス
     ├── github_trending/  # GitHub Trendingサービス
     ├── hacker_news/      # Hacker Newsサービス
@@ -162,7 +220,8 @@ GNU AFFERO GENERAL PUBLIC LICENSE
 ## 謝辞
 - [Nook](https://github.com/discus0434/nook)
 - [FastAPI](https://fastapi.tiangolo.com/)
-- [Streamlit](https://streamlit.io/)
+- [React](https://reactjs.org/)
+- [Vite](https://vitejs.dev/)
 - [OpenWeatherMap](https://openweathermap.org/)
 - [Grok](https://grok.ai/)
 - [Reddit API](https://www.reddit.com/dev/api/)

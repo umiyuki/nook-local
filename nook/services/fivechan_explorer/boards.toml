@@ -1,0 +1,23 @@
+# 板の設定
+
+# key=板ID、value=板名
+# 添付されたHTMLに基づいて5chのAI関連スレッドがありそうな板
+[boards]
+"cg" = "CG"
+"prog" = "プログラミング"
+"tech" = "技術"
+"software" = "ソフトウェア"
+"ai" = "人工知能"
+"mmo" = "ネットゲーム"
+"apple" = "Apple"
+"android" = "Android"
+"akiba" = "秋葉原"
+"gogame" = "囲碁"
+"iga" = "アニメ"
+"gamedev" = "ゲーム制作技術"
+"db" = "データベース"
+"tis" = "通信技術"
+"bobby" = "ネットワーク"
+"hack" = "ハッキング"
+"sns" = "ソーシャルネット"
+"scienceplus" = "科学ニュース+"

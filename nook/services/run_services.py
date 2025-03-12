@@ -18,9 +18,38 @@ from nook.services.github_trending.github_trending import GithubTrending
 # 他のサービスをインポート（クラス名を修正）
 from nook.services.hacker_news.hacker_news import HackerNewsRetriever
 from nook.services.reddit_explorer.reddit_explorer import RedditExplorer
+from nook.services.zenn_explorer.zenn_explorer import ZennExplorer
+from nook.services.qiita_explorer.qiita_explorer import QiitaExplorer
+from nook.services.note_explorer.note_explorer import NoteExplorer
 from nook.services.tech_feed.tech_feed import TechFeed
+from nook.services.business_feed.business_feed import BusinessFeed
 from nook.services.paper_summarizer.paper_summarizer import PaperSummarizer
-from nook.services.twitter_poster.twitter_poster import TwitterPoster
+from nook.services.fourchan_explorer.fourchan_explorer import FourChanExplorer
+from nook.services.fivechan_explorer.fivechan_explorer import FiveChanExplorer
+
+def run_fivechan_explorer():
+    """
+    5chanからのAI関連スレッド収集サービスを実行します。
+    """
+    print("5chanからAI関連スレッドを収集しています...")
+    try:
+        fivechan_explorer = FiveChanExplorer()
+        fivechan_explorer.run()
+        print("5chanからのAI関連スレッド収集が完了しました。")
+    except Exception as e:
+        print(f"5chanからのAI関連スレッド収集中にエラーが発生しました: {str(e)}")
+
+def run_fourchan_explorer():
+    """
+    4chanからのAI関連スレッド収集サービスを実行します。
+    """
+    print("4chanからAI関連スレッドを収集しています...")
+    try:
+        fourchan_explorer = FourChanExplorer()
+        fourchan_explorer.run()
+        print("4chanからのAI関連スレッド収集が完了しました。")
+    except Exception as e:
+        print(f"4chanからのAI関連スレッド収集中にエラーが発生しました: {str(e)}")
 
 def run_github_trending():
     """
@@ -43,6 +72,42 @@ def run_hacker_news():
         print("Hacker News記事の収集が完了しました。")
     except Exception as e:
         print(f"Hacker News記事の収集中にエラーが発生しました: {str(e)}")
+
+def run_note_explorer():
+    """
+    Noteエクスプローラーサービスを実行します。
+    """
+    print("Note投稿を収集しています...")
+    try:
+        note_explorer = NoteExplorer()
+        note_explorer.run()
+        print("Note投稿の収集が完了しました。")
+    except Exception as e:
+        print(f"Note投稿の収集中にエラーが発生しました: {str(e)}")
+
+def run_zenn_explorer():
+    """
+    Zennエクスプローラーサービスを実行します。
+    """
+    print("Zenn投稿を収集しています...")
+    try:
+        zenn_explorer = ZennExplorer()
+        zenn_explorer.run()
+        print("zenn投稿の収集が完了しました。")
+    except Exception as e:
+        print(f"zenn投稿の収集中にエラーが発生しました: {str(e)}")
+
+def run_qiita_explorer():
+    """
+    Qiitaエクスプローラーサービスを実行します。
+    """
+    print("Qiita投稿を収集しています...")
+    try:
+        qiita_explorer = QiitaExplorer()
+        qiita_explorer.run()
+        print("qiita投稿の収集が完了しました。")
+    except Exception as e:
+        print(f"qiita投稿の収集中にエラーが発生しました: {str(e)}")
 
 def run_reddit_explorer():
     """
@@ -74,6 +139,18 @@ def run_tech_feed():
     except Exception as e:
         print(f"技術ブログのフィード収集中にエラーが発生しました: {str(e)}")
 
+def run_business_feed():
+    """
+    ビジネスフィードサービスを実行します。
+    """
+    print("ビジネス記事のフィードを収集しています...")
+    try:
+        business_feed = BusinessFeed()
+        business_feed.run()
+        print("ビジネス記事のフィードの収集が完了しました。")
+    except Exception as e:
+        print(f"ビジネス記事のフィード収集中にエラーが発生しました: {str(e)}")
+
 def run_paper_summarizer():
     """
     論文要約サービスを実行します。
@@ -92,132 +169,6 @@ def run_paper_summarizer():
     except Exception as e:
         print(f"論文の収集・要約中にエラーが発生しました: {str(e)}")
 
-def run_twitter_poster():
-    """
-    Twitterポスターサービスを実行します。
-    """
-    print("収集した情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.run()
-        print("Xへの投稿が完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_github():
-    """
-    GitHub Trendingの情報をXにポストします。
-    """
-    print("GitHub Trendingの情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_github_trending()
-        print("GitHub Trendingの情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_hackernews():
-    """
-    Hacker Newsの情報をXにポストします。
-    """
-    print("Hacker Newsの情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_hacker_news()
-        print("Hacker Newsの情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_arxiv():
-    """
-    arXiv論文の情報をXにポストします。
-    """
-    print("arXiv論文の情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_arxiv_papers()
-        print("arXiv論文の情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_reddit():
-    """
-    Reddit記事の情報をXにポストします。
-    """
-    print("Reddit記事の情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_reddit_articles()
-        print("Reddit記事の情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
-def run_twitter_techfeed():
-    """
-    技術ブログ記事の情報をXにポストします。
-    """
-    print("技術ブログ記事の情報をXにポストしています...")
-    try:
-        # Twitter APIキーの確認
-        required_keys = ["CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "ACCESS_TOKEN", "ACCESS_SECRET"]
-        missing_keys = [key for key in required_keys if not os.environ.get(key)]
-        
-        if missing_keys:
-            print(f"警告: 以下のTwitter API環境変数が設定されていません: {', '.join(missing_keys)}")
-            print("Twitter APIを使用するには、これらの環境変数を設定してください。")
-            return
-            
-        twitter_poster = TwitterPoster()
-        twitter_poster.post_tech_feed()
-        print("技術ブログ記事の情報のポストが完了しました。")
-    except Exception as e:
-        print(f"Xへの投稿中にエラーが発生しました: {str(e)}")
-
 def main():
     """
     コマンドライン引数に基づいて、指定されたサービスを実行します。
@@ -226,8 +177,7 @@ def main():
     parser.add_argument(
         "--service", 
         type=str,
-        choices=["all", "github", "hackernews", "reddit", "techfeed", "paper", "twitter", 
-                "twitter_github", "twitter_hackernews", "twitter_arxiv", "twitter_reddit", "twitter_techfeed"],
+        choices=["all", "paper", "github", "hacker_news", "tech_news", "business_news", "zenn", "qiita", "note", "reddit", "4chan", "5chan"],
         default="all",
         help="実行するサービス (デフォルト: all)"
     )
@@ -242,31 +192,49 @@ def main():
     
     if args.service == "all" or args.service == "reddit":
         run_reddit_explorer()
+
+    if args.service == "all" or args.service == "qiita":
+        run_qiita_explorer()
+
+    if args.service == "all" or args.service == "zenn":
+        run_zenn_explorer()
+
+    if args.service == "all" or args.service == "note":
+        run_note_explorer()
     
     if args.service == "all" or args.service == "techfeed":
         run_tech_feed()
+
+    if args.service == "all" or args.service == "businessfeed":
+        run_business_feed()
     
     if args.service == "all" or args.service == "paper":
         run_paper_summarizer()
     
-    if args.service == "twitter":
-        run_twitter_poster()
+    #if args.service == "twitter":
+        #run_twitter_poster()
     
     # 個別のTwitter投稿オプション
-    if args.service == "twitter_github":
-        run_twitter_github()
+    #if args.service == "twitter_github":
+        #run_twitter_github()
     
-    if args.service == "twitter_hackernews":
-        run_twitter_hackernews()
+    #if args.service == "twitter_hackernews":
+        #run_twitter_hackernews()
     
-    if args.service == "twitter_arxiv":
-        run_twitter_arxiv()
+    #if args.service == "twitter_arxiv":
+        #run_twitter_arxiv()
     
-    if args.service == "twitter_reddit":
-        run_twitter_reddit()
+    #if args.service == "twitter_reddit":
+        #run_twitter_reddit()
     
-    if args.service == "twitter_techfeed":
-        run_twitter_techfeed()
+    #if args.service == "twitter_techfeed":
+        #run_twitter_techfeed()
+
+    if args.service == "all" or args.service == "4chan":
+        run_fourchan_explorer()
+
+    if args.service == "all" or args.service == "5chan":
+        run_fivechan_explorer()
 
     # 実行完了後にレポートを表示
     counter.report()

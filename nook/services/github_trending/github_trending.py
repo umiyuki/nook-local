@@ -150,16 +150,16 @@ class GithubTrending:
         except Exception as e:
             print(f"Error retrieving repositories for language {language}: {str(e)}")
             return []
-    
+
     def _translate_repositories(self, repositories_by_language: List[tuple[str, List[Repository]]]) -> List[tuple[str, List[Repository]]]:
         """
         リポジトリの説明を日本語に翻訳します。
-        
+
         Parameters
         ----------
         repositories_by_language : List[tuple[str, List[Repository]]]
             言語ごとのリポジトリリスト。
-            
+
         Returns
         -------
         List[tuple[str, List[Repository]]]
@@ -182,7 +182,7 @@ class GithubTrending:
         
         except Exception as e:
             print(f"Error in translation process: {str(e)}")
-        
+
         return repositories_by_language
     
     def _store_summaries(self, repositories_by_language: List[tuple[str, List[Repository]]]) -> None:

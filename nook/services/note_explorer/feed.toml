@@ -1,0 +1,9 @@
+# フィード設定
+
+note = [
+    "https://note.com/hashtag/stablediffusion/rss",
+    "https://note.com/hashtag/画像生成/rss",
+    "https://note.com/hashtag/生成ai/rss",
+    "https://note.com/hashtag/ai/rss",
+    "https://note.com/hashtag/llm/rss",
+]

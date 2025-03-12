@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: nook-backend-dev
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+    env_file:
+      - .env
+    command: python -m nook.api.run --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - nook-network-dev
+
+  frontend:
+    image: node:18-alpine
+    container_name: nook-frontend-dev
+    working_dir: /app
+    volumes:
+      - ./nook/frontend:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend
+    networks:
+      - nook-network-dev
+
+networks:
+  nook-network-dev:
+    driver: bridge 

@@ -36,3 +36,5 @@ python-dateutil>=2.8.2
 # Tweepy
 tweepy>=4.14.0
 
+dotenv
+

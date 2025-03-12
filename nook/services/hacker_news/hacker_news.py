@@ -29,11 +29,12 @@ class Story:
     text : str | None
         本文。
     """
-    
     title: str
     score: int
     url: Optional[str] = None
     text: Optional[str] = None
+    summary: str = ""
+
 
 
 class HackerNewsRetriever:
@@ -55,6 +56,7 @@ class HackerNewsRetriever:
         storage_dir : str, default="data"
             ストレージディレクトリのパス。
         """
+        self.grok_client = Grok3Client()
         self.storage = LocalStorage(storage_dir)
         self.base_url = "https://hacker-news.firebaseio.com/v0"
     
@@ -147,57 +149,55 @@ class HackerNewsRetriever:
             
             stories.append(story)
         
-        # 日本語に翻訳
-        stories = self._translate_stories_to_japanese(stories)
+        for story in stories:
+            self._summarize_story(story)
         
         return stories
     
-    def _translate_stories_to_japanese(self, stories: List[Story]) -> List[Story]:
+    def _summarize_story(self, story: Story) -> None:
         """
-        記事を日本語に翻訳します。
-        
+        Hacker News記事を要約します。
+
         Parameters
         ----------
-        stories : List[Story]
-            翻訳する記事のリスト。
-            
-        Returns
-        -------
-        List[Story]
-            翻訳された記事のリスト。
+        story : Story
+            要約する記事。
         """
-        try:
-            # GoogletransのTranslatorインスタンスを作成
-            translator = Translator()
+        if not story.text:
+            story.summary = "本文情報がないため要約できません。"
+            return
 
-            for story in stories:
-                # タイトルの翻訳
-                if story.title:
-                    try:
-                        # 英語から日本語に翻訳
-                        translated = translator.translate(story.title, src='en', dest='ja')
-                        # Googletrans呼び出しをカウント
-                        counter.increment_googletrans("hacker_news")
-                        story.title = translated.text
-                    except Exception as e:
-                        print(f"Error translating title: {str(e)}")
-                
-                # 本文の翻訳
-                if story.text:
-                    try:
-                        # 英語から日本語に翻訳
-                        translated = translator.translate(story.text, src='en', dest='ja')
-                        # Googletrans呼び出しをカウント
-                        counter.increment_googletrans("hacker_news")
-                        story.text = translated.text
-                    except Exception as e:
-                        print(f"Error translating text: {str(e)}")
-        
+        prompt = f"""
+        以下のHacker News記事を要約してください。
+
+        タイトル: {story.title}
+        本文: {story.text}
+        スコア: {story.score}
+
+        要約は以下の形式で行い、日本語で回答してください:
+        1. 記事の主な内容（1-2文）
+        2. 重要なポイント（箇条書き3-5点）
+        3. この記事が注目を集めた理由
+        """
+
+        system_instruction = """
+        あなたはHacker News記事の要約を行うアシスタントです。
+        与えられた記事を分析し、簡潔で情報量の多い要約を作成してください。
+        技術的な内容は正確に、一般的な内容は分かりやすく要約してください。
+        回答は必ず日本語で行ってください。専門用語は適切に翻訳し、必要に応じて英語の専門用語を括弧内に残してください。
+        """
+
+        try:
+            summary = self.grok_client.generate_content(
+                prompt=prompt,
+                system_instruction=system_instruction,
+                temperature=0.3,
+                max_tokens=1000
+            )
+            story.summary = summary
         except Exception as e:
-            print(f"Error translating stories: {str(e)}")
-        
-        return stories
-    
+            story.summary = f"要約の生成中にエラーが発生しました: {str(e)}"
+
     def _store_summaries(self, stories: List[Story]) -> None:
         """
         記事情報を保存します。
@@ -215,10 +215,13 @@ class HackerNewsRetriever:
             content += f"## {title_link}\n\n"
             content += f"スコア: {story.score}\n\n"
             
-            if story.text:
+            # 要約があれば表示、なければ本文を表示
+            if story.summary:
+                content += f"**要約**:\n{story.summary}\n\n"
+            elif story.text:
                 content += f"{story.text[:500]}{'...' if len(story.text) > 500 else ''}\n\n"
             
             content += "---\n\n"
         
         # 保存
-        self.storage.save_markdown(content, "hacker_news", today) 
+        self.storage.save_markdown(content, "hacker_news", today)

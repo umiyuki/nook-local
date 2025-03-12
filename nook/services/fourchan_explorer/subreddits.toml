@@ -2,12 +2,9 @@
 
 # 技術関連
 tech = [
-    "StableDiffusion",
     "artificial",
     "compsci",
     "coding",
-    "MachineLearning",
-    "LocalLLaMA",
 ]
 
 # ニュース

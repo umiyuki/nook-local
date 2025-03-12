@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nook - パーソナル情報ハブ インフォグラフィック</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Poppins:wght@400;500;600;700&display=swap');
+    
+    :root {
+      --blue-50: #eff6ff;
+      --blue-100: #dbeafe;
+      --blue-200: #bfdbfe;
+      --blue-300: #93c5fd;
+      --blue-400: #60a5fa;
+      --blue-500: #3b82f6;
+      --blue-600: #2563eb;
+      --blue-700: #1d4ed8;
+      --blue-800: #1e40af;
+      --blue-900: #1e3a8a;
+      --blue-950: #172554;
+      
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      
+      --accent-1: #06b6d4;
+      --accent-2: #0ea5e9;
+      --accent-3: #8b5cf6;
+      
+      --text-main: var(--gray-700);
+      --text-heading: var(--blue-800);
+      --text-light: var(--gray-500);
+      --bg-main: var(--gray-50);
+      --bg-card: white;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 0;
+      background-image: radial-gradient(var(--blue-100) 1px, transparent 1px);
+      background-size: 20px 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 2rem;
+      overflow: visible;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--blue-200);
+      position: relative;
+    }
+    
+    .header::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 100px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--blue-600), var(--accent-3));
+      border-radius: 3px;
+    }
+    
+    .title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--blue-800);
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .title-emoji {
+      font-size: 2rem;
+      background: linear-gradient(135deg, var(--blue-500), var(--accent-3));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    
+    .date {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--gray-500);
+      background-color: var(--blue-50);
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .content {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
+    
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    
+    .card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--blue-100);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--blue-600), var(--accent-3));
+    }
+    
+    .section-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-heading);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .section-title-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+      color: white;
+      border-radius: 8px;
+      font-size: 1.25rem;
+    }
+    
+    .highlight {
+      background: linear-gradient(transparent 70%, var(--blue-200) 70%);
+      padding: 0 4px;
+      font-weight: 500;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding-left: 0.5rem;
+      margin-top: 1.5rem;
+    }
+    
+    .feature-list li {
+      position: relative;
+      padding-left: 2rem;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+    
+    .feature-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.25rem;
+      width: 20px;
+      height: 20px;
+      background-color: var(--blue-100);
+      border-radius: 50%;
+    }
+    
+    .feature-list li::after {
+      content: "✓";
+      position: absolute;
+      left: 5px;
+      top: 1px;
+      color: var(--blue-700);
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    
+    .info-box {
+      background: linear-gradient(135deg, var(--blue-50), var(--blue-100));
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      position: relative;
+      border-left: 4px solid var(--blue-500);
+    }
+    
+    .info-box-title {
+      font-weight: 600;
+      color: var(--blue-800);
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    
+    .source-list {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    
+    .source-item {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      background-color: var(--gray-50);
+      border-radius: 12px;
+      border: 1px solid var(--gray-200);
+      transition: all 0.3s ease;
+    }
+    
+    .source-item:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--blue-300);
+    }
+    
+    .source-icon {
+      width: 40px;
+      height: 40px;
+      margin-right: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+      color: white;
+      border-radius: 8px;
+    }
+    
+    .source-text {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--gray-800);
+    }
+    
+    .architecture {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    
+    .arch-component {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--blue-100);
+      transition: all 0.3s ease;
+    }
+    
+    .arch-component:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--blue-300);
+    }
+    
+    .arch-component::after {
+      content: "";
+      position: absolute;
+      bottom: -16px;
+      left: 50%;
+      width: 2px;
+      height: 16px;
+      background-color: var(--blue-300);
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+    
+    .arch-component:last-child::after {
+      display: none;
+    }
+    
+    .arch-component h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+      color: var(--blue-800);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .arch-component h3::before {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background-color: var(--blue-500);
+      border-radius: 50%;
+    }
+    
+    .arch-component p {
+      font-size: 1rem;
+      margin: 0;
+      color: var(--gray-600);
+    }
+    
+    .screenshots {
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+    
+    .screenshot-title {
+      font-size: 1.1rem;
+      color: var(--text-heading);
+      margin-bottom: 1rem;
+      font-weight: 500;
+    }
+    
+    .screenshot-img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--blue-200);
+      transition: transform 0.3s ease;
+    }
+    
+    .screenshot-img:hover {
+      transform: scale(1.02);
+    }
+    
+    .footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--blue-200);
+      font-size: 0.9rem;
+      color: var(--gray-500);
+      text-align: center;
+    }
+    
+    .footer a {
+      color: var(--blue-600);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    
+    .footer a:hover {
+      color: var(--blue-800);
+      text-decoration: underline;
+    }
+    
+    @media (max-width: 1024px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+      
+      .source-list {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .title {
+        font-size: 2rem;
+      }
+      
+      .card {
+        padding: 1.5rem;
+      }
+      
+      .source-list {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .source-list {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="title"><span class="title-emoji">📚</span>Nook - パーソナル情報ハブ</h1>
+      <div class="date">2025年3月作成</div>
+    </header>
+    
+    <div class="content">
+      <div class="column">
+        <div class="card">
+          <h2 class="section-title"><span class="section-title-icon">📌</span>プロジェクト概要</h2>
+          <p>動詞さんが開発された<a href="https://github.com/discus0434/nook">Nook</a>をベースにしています。公開に感謝いたします。</p>
+          <p>Nookは、さまざまな情報ソース（Reddit、Hacker News、GitHub Trending、Tech Feed、arXiv論文）からコンテンツを収集し、一元的に表示する<span class="highlight">パーソナル情報ハブ</span>です。</p>
+          
+          <div class="info-box">
+            <div class="info-box-title">特徴</div>
+            <p>完全にローカルで動作！<br>取得した記事はすべて日本語に変換！</p>
+          </div>
+          
+          <h3 class="section-title"><span class="section-title-icon">🔍</span>主な機能</h3>
+          <ul class="feature-list">
+            <li>複数の情報ソースからのコンテンツ収集と表示</li>
+            <li>日付ごとのコンテンツフィルタリング</li>
+            <li>天気情報の表示（OpenWeatherMap API）</li>
+            <li>Grok APIによるテキスト生成・要約</li>
+          </ul>
+        </div>
+        
+        <div class="card">
+          <h2 class="section-title"><span class="section-title-icon">🌐</span>情報ソース一覧</h2>
+          <ul class="source-list">
+            <li class="source-item">
+              <div class="source-icon">📱</div>
+              <span class="source-text">Reddit人気投稿</span>
+            </li>
+            <li class="source-item">
+              <div class="source-icon">📰</div>
+              <span class="source-text">Hacker News記事</span>
+            </li>
+            <li class="source-item">
+              <div class="source-icon">💻</div>
+              <span class="source-text">GitHub Trending</span>
+            </li>
+            <li class="source-item">
+              <div class="source-icon">🌐</div>
+              <span class="source-text">技術ブログRSS</span>
+            </li>
+            <li class="source-item">
+              <div class="source-icon">📄</div>
+              <span class="source-text">arXiv論文</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="column">
+        <div class="card">
+          <h2 class="section-title"><span class="section-title-icon">🏗️</span>アーキテクチャ</h2>
+          <div class="architecture">
+            <div class="arch-component">
+              <h3>フロントエンド（React + Vite）</h3>
+              <p>サイドバー（ソース選択、日付選択、天気表示）とコンテンツビューア</p>
+            </div>
+            
+            <div class="arch-component">
+              <h3>バックエンド（FastAPI）</h3>
+              <p>コンテンツAPI</p>
+            </div>
+            
+            <div class="arch-component">
+              <h3>サービス</h3>
+              <ul class="feature-list">
+                <li>Reddit Explorer</li>
+                <li>Hacker News Retriever</li>
+                <li>GitHub Trending</li>
+                <li>Tech Feed</li>
+                <li>Paper Summarizer</li>
+              </ul>
+            </div>
+            
+            <div class="arch-component">
+              <h3>ローカルストレージ</h3>
+              <p>~/nook/data/ に日付ごとにデータを保存</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2 class="section-title"><span class="section-title-icon">📱</span>画面イメージ</h2>
+          <div class="screenshots">
+            <h3 class="screenshot-title">ダークモード</h3>
+            <img src="assets/screenshots/dark-screenshot.png" alt="ダークモード画面" class="screenshot-img">
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <footer class="footer">
+      <p>ベース: Discus0434氏の<a href="https://github.com/discus0434/nook">Nook</a> | ライセンス: GNU AFFERO GENERAL PUBLIC LICENSE</p>
+    </footer>
+  </div>
+</body>
+</html> 
