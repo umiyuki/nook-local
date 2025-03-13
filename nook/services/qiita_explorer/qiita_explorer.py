@@ -10,7 +10,7 @@ import feedparser
 import requests
 from bs4 import BeautifulSoup
 
-from nook.common.grok_client import Grok3Client
+from nook.common.gemini_client import GeminiClient
 from nook.common.storage import LocalStorage
 
 
@@ -70,7 +70,7 @@ class QiitaExplorer:
             ストレージディレクトリのパス。
         """
         self.storage = LocalStorage(storage_dir)
-        self.grok_client = Grok3Client()
+        self.grok_client = GeminiClient()
         
         # フィードの設定を読み込む
         script_dir = Path(__file__).parent
