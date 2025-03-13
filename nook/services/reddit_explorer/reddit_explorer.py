@@ -180,8 +180,10 @@ class RedditExplorer:
                 post_type = "link"
             
             # タイトルと本文を日本語に翻訳
-            title = submission.title
-            text_ja = self._translate_to_japanese(submission.selftext) if submission.selftext else ""
+            title_en = submission.title
+            title_ja = self._translate_to_japanese(submission.title)
+            text_ja = self._translate_to_japanese(submission.selftext) if submission.selftext and submission.selftext.strip() else ""
+            title = f"{title_en}\n（{title_ja}）" if title_ja != title_en else title_en
             
             post = RedditPost(
                 type=post_type,
@@ -272,9 +274,11 @@ class RedditExplorer:
         prompt = f"""
         以下のReddit投稿を要約してください。
 
-        タイトル: {post.title}
-        本文: {post.text if post.text else '(本文なし)'}
-        URL: {post.url if post.url else '(URLなし)'}
+        タイトル:
+        {post.title}
+        
+        本文:
+        {post.text if post.text else '(本文なし)'}
         
         トップコメント:
         {chr(10).join([f"- {comment['text']}" for comment in post.comments])}
@@ -336,7 +340,7 @@ class RedditExplorer:
                 content += f"### r/{subreddit}\n\n"
                 
                 for post in subreddit_posts:
-                    content += f"#### [{post.title}]({post.permalink})\n\n"
+                    content += f"#### {post.title}\n[Reddit Link]({post.permalink})" + (f"\n[Content Link]({post.url})\n\n" if post.url and post.url != post.permalink else "\n\n")
                     
                     if post.url and post.url != post.permalink:
                         content += f"リンク: {post.url}\n\n"

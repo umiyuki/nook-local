@@ -14,6 +14,8 @@ from bs4 import BeautifulSoup
 
 from nook.common.gemini_client import GeminiClient
 from nook.common.storage import LocalStorage
+from googletrans import Translator
+from nook.common.counters import counter
 
 
 @dataclass
@@ -80,6 +82,28 @@ class FourChanExplorer:
         
         # APIリクエスト間の遅延（4chanのAPI利用規約を遵守するため）
         self.request_delay = 1  # 秒
+    
+    def _translate_to_japanese(self, text: str) -> str:
+        """
+        テキストを日本語に翻訳します。
+        
+        Parameters
+        ----------
+        text : str
+            翻訳するテキスト。
+        
+        Returns
+        -------
+        str
+            翻訳されたテキスト。
+        """
+        try:
+            translator = Translator()
+            translated = translator.translate(text, src='en', dest='ja')
+            counter.increment_googletrans("fourchan_explorer")
+            return translated.text
+        except Exception as e:
+            return text
     
     def run(self, thread_limit: int = 5) -> None:
         """
@@ -164,6 +188,9 @@ class FourChanExplorer:
                     thread_id = thread.get("no")
                     timestamp = thread.get("time", 0)
                     title = thread.get("sub", f"Untitled Thread {thread_id}")
+                    if title and title != f"Untitled Thread {thread_id}":
+                        title_ja = self._translate_to_japanese(title)
+                        title = f"{title}\n（{title_ja}）" if title_ja != title else title
                     
                     # スレッドのURLを構築
                     thread_url = f"https://boards.4chan.org/{board}/thread/{thread_id}"
@@ -310,8 +337,7 @@ class FourChanExplorer:
             content += f"## /{board}/\n\n"
             
             for thread in board_threads:
-                formatted_title = thread.title if thread.title else f"無題スレッド #{thread.thread_id}"
-                content += f"### [{formatted_title}]({thread.url})\n\n"
+                content += f"### {thread.title}\n[4chan Link]({thread.url})\n\n"
                 content += f"作成日時: <t:{thread.timestamp}:F>\n\n"
                 content += f"**要約**:\n{thread.summary}\n\n"
                 
