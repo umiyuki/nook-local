@@ -6,7 +6,7 @@ import { ContentCard } from './components/ContentCard';
 import { WeatherWidget } from './components/WeatherWidget';
 import { getContent } from './api';
 
-const sources = ['paper', 'github', 'hacker news', 'tech news', 'business news', 'zenn', 'qiita', 'note', 'reddit', '4chan', '5chan'];
+const sources = ['paper', 'github', 'github_details', 'hacker news', 'tech news', 'business news', 'zenn', 'qiita', 'note', 'reddit', '4chan', '5chan'];
 
 function App() {
   const [selectedSource, setSelectedSource] = useState('hacker news');
@@ -17,7 +17,7 @@ function App() {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme ? savedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
-  
+
   // テーマの変更を監視して適用
   useEffect(() => {
     if (darkMode) {
@@ -28,7 +28,7 @@ function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
-  
+
   const { data, isLoading, isError, error, refetch } = useQuery(
     ['content', selectedSource, format(selectedDate, 'yyyy-MM-dd')],
     () => getContent(selectedSource, format(selectedDate, 'yyyy-MM-dd')),
@@ -45,12 +45,12 @@ function App() {
           <span className="text-xl font-bold text-gray-900 dark:text-white">Dashboard</span>
         </div>
       </div>
-      
+
       {/* 天気ウィジェット */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <WeatherWidget />
       </div>
-      
+
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2 mb-3">
           <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -71,16 +71,20 @@ function App() {
           <button
             key={source}
             onClick={() => setSelectedSource(source)}
-            className={`w-full text-left px-4 py-2 rounded-lg font-medium mb-2 transition-colors ${
-              selectedSource === source
-                ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/30'
-            }`}
+            className={`w-full text-left px-4 py-2 rounded-lg font-medium mb-2 transition-colors ${selectedSource === source
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+              : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/30'
+              }`}
           >
-            {source.charAt(0).toUpperCase() + source.slice(1)}
+            {source === 'github_details'
+              ? 'GitHub Details'
+              : source.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ')
+            }
           </button>
         ))}
-        
+
         {/* テーマ切り替えボタン */}
         <div className="mt-6">
           <div className="mb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Theme</div>

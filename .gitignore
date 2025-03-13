@@ -20,3 +20,4 @@ venv
 .cursorignore
 
 data
+cron.log

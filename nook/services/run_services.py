@@ -14,6 +14,7 @@ load_dotenv()
 
 # GitHubトレンドサービス
 from nook.services.github_trending.github_trending import GithubTrending
+from nook.services.github_details.github_details import run_service as run_github_details
 
 # 他のサービスをインポート（クラス名を修正）
 from nook.services.hacker_news.hacker_news import HackerNewsRetriever
@@ -26,6 +27,21 @@ from nook.services.business_feed.business_feed import BusinessFeed
 from nook.services.paper_summarizer.paper_summarizer import PaperSummarizer
 from nook.services.fourchan_explorer.fourchan_explorer import FourChanExplorer
 from nook.services.fivechan_explorer.fivechan_explorer import FiveChanExplorer
+
+def run_github_details_service():
+    """
+    GitHub詳細情報収集サービスを実行します。
+    """
+    print("GitHubリポジトリの詳細情報を収集しています...")
+    try:
+        # GITHUB_TOKENの確認
+        if not os.environ.get("GITHUB_TOKEN"):
+            print("警告: GITHUB_TOKEN が設定されていません。")
+            return
+        run_github_details()
+        print("GitHubリポジトリの詳細情報の収集が完了しました。")
+    except Exception as e:
+        print(f"GitHubリポジトリの詳細情報の収集中にエラーが発生しました: {str(e)}")
 
 def run_fivechan_explorer():
     """
@@ -177,7 +193,7 @@ def main():
     parser.add_argument(
         "--service", 
         type=str,
-        choices=["all", "paper", "github", "hacker_news", "tech_news", "business_news", "zenn", "qiita", "note", "reddit", "4chan", "5chan"],
+        choices=["all", "paper", "github", "github_details", "hacker_news", "tech_news", "business_news", "zenn", "qiita", "note", "reddit", "4chan", "5chan"],
         default="all",
         help="実行するサービス (デフォルト: all)"
     )
@@ -186,6 +202,9 @@ def main():
     
     if args.service == "all" or args.service == "github":
         run_github_trending()
+
+    if args.service == "all" or args.service == "github_details":
+        run_github_details_service()
     
     if args.service == "all" or args.service == "hackernews":
         run_hacker_news()
