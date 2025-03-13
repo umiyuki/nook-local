@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 
 from nook.common.gemini_client import GeminiClient
 from nook.common.storage import LocalStorage
+from nook.common.tracked_thread import TrackedThread
 
 
 @dataclass
@@ -65,6 +66,10 @@ class FiveChanExplorer:
         """
         self.storage = LocalStorage(storage_dir)
         self.grok_client = GeminiClient()
+        
+        # 追跡対象スレッドの読み込み
+        script_dir = Path(__file__).parent
+        self.tracked_threads = TrackedThread.load_tracked_threads(script_dir / "tracked_threads.json")
         
         # 対象となる板
         self.target_boards = self._load_boards()
@@ -122,26 +127,49 @@ class FiveChanExplorer:
         """
         all_threads = []
         
-        # 各板からスレッドを取得
-        for board_id, board_name in self.target_boards.items():
+        # まず追跡対象スレッドを処理
+        for thread_name, tracked_thread in self.tracked_threads.items():
             try:
-                print(f"板 /{board_id}/({board_name}) からのスレッド取得を開始します...")
-                threads = self._retrieve_ai_threads(board_id, thread_limit)
-                print(f"板 /{board_id}/({board_name}) から {len(threads)} 件のスレッドを取得しました")
+                print(f"追跡対象スレッド「{thread_name}」の処理を開始します...")
                 
-                # スレッドを要約
-                for thread in threads:
-                    self._summarize_thread(thread)
+                # 板一覧とスレッド一覧を取得
+                thread_info = self._find_latest_thread(tracked_thread.board, thread_name)
                 
-                all_threads.extend(threads)
-                
-                # リクエスト間の遅延
-                time.sleep(self.request_delay)
-            
+                if thread_info:
+                    thread_id, title, url = thread_info
+                    posts, timestamp = self._retrieve_thread_posts(url)
+                    
+                    if posts:
+                        # 差分を計算
+                        new_posts = []
+                        for post in posts:
+                            if not tracked_thread.last_post_no or post["no"] > tracked_thread.last_post_no:
+                                new_posts.append(post)
+                        
+                        if new_posts:
+                            thread = Thread(
+                                thread_id=thread_id,
+                                title=title,
+                                url=url,
+                                board=tracked_thread.board,
+                                posts=new_posts,
+                                timestamp=timestamp
+                            )
+                            self._summarize_thread(thread)
+                            all_threads.append(thread)
+                        
+                        # 追跡情報を更新
+                        max_post_no = max(post["no"] for post in posts)
+                        tracked_thread.update(
+                            thread_id=thread_id,
+                            url=url,
+                            last_post_no=max_post_no
+                        )
             except Exception as e:
-                print(f"Error processing board /{board_id}/: {str(e)}")
+                print(f"追跡対象スレッド「{thread_name}」の処理中にエラーが発生しました: {str(e)}")
         
-        print(f"合計 {len(all_threads)} 件のスレッドを取得しました")
+        # AIキーワードを含むスレッドを収集
+        all_threads.extend(self._collect_ai_threads(thread_limit))
         
         # 要約を保存
         if all_threads:
@@ -149,7 +177,92 @@ class FiveChanExplorer:
             print(f"スレッドの要約を保存しました")
         else:
             print("保存するスレッドがありません")
+        
+        # 追跡情報を保存
+        script_dir = Path(__file__).parent
+        TrackedThread.save_tracked_threads(self.tracked_threads, script_dir / "tracked_threads.json")
     
+    def _collect_ai_threads(self, thread_limit: int) -> List[Thread]:
+        """AIに関連するスレッドを収集します。"""
+        ai_threads = []
+        
+        # 各板からAIキーワードを含むスレッドを取得
+        for board_id, board_name in self.target_boards.items():
+            try:
+                print(f"板 /{board_id}/({board_name}) からのスレッド取得を開始します...")
+                threads = self._retrieve_ai_threads(board_id, thread_limit)
+                print(f"板 /{board_id}/({board_name}) から {len(threads)} 件のスレッドを取得しました")
+                
+                # スレッドを要約と追加（追跡対象と重複しないものだけ）
+                tracked_names = {t.name.lower() for t in self.tracked_threads.values()}
+                for thread in threads:
+                    if thread.title.lower() not in tracked_names:
+                        self._summarize_thread(thread)
+                        ai_threads.append(thread)
+                
+                # リクエスト間の遅延
+                time.sleep(self.request_delay)
+            except Exception as e:
+                print(f"板 /{board_id}/({board_name}) の処理中にエラーが発生しました: {str(e)}")
+        
+        return ai_threads
+    
+    def _find_latest_thread(self, board: str, thread_name: str) -> Optional[tuple[int, str, str]]:
+        """
+        特定の名前のスレッドの最新版を見つけます。
+
+        Parameters
+        ----------
+        board : str
+            板名。
+        thread_name : str
+            検索するスレッド名。
+
+        Returns
+        -------
+        Optional[tuple[int, str, str]]
+            見つかった場合は (スレッドID, スレッドタイトル, URL) のタプル。
+            見つからなかった場合は None。
+        """
+        board_url = f"https://menu.5ch.net/bbsmenu.html"
+        
+        try:
+            # 板一覧ページにアクセス
+            response = requests.get(board_url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }, timeout=15)
+            response.raise_for_status()
+            
+            # 板のURLを探す
+            soup = BeautifulSoup(response.text, 'html.parser')
+            actual_board_url = None
+            
+            for link in soup.find_all('a'):
+                href = link.get('href', '')
+                if f"/{board}/" in href and not href.endswith('.html'):
+                    actual_board_url = href
+                    break
+            
+            if actual_board_url:
+                # 板のスレッド一覧にアクセス
+                response = requests.get(actual_board_url, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }, timeout=15)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.text, 'html.parser')
+                for thread_link in soup.select('a[href*="/test/read.cgi/"]'):
+                    if thread_name in thread_link.text:
+                        href = thread_link['href']
+                        match = re.search(r'/(\d+)(?:/|$)', href)
+                        if match:
+                            thread_id = int(match.group(1))
+                            return thread_id, thread_link.text, href
+        
+        except Exception as e:
+            print(f"スレッド検索エラー: {str(e)}")
+        
+        return None
     def _retrieve_ai_threads(self, board_id: str, limit: int) -> List[Thread]:
         """
         特定の板からAI関連スレッドを取得します。
@@ -261,12 +374,9 @@ class FiveChanExplorer:
                                 url=thread_url,
                                 board=board_id,
                                 posts=posts,
-                                timestamp=timestamp
+                                timestamp=timestamp or int(datetime.now().timestamp())
                             )
-                            
                             ai_threads.append(thread)
-                            
-                            # 指定された数のスレッドを取得したら終了
                             if len(ai_threads) >= limit:
                                 break
                         
@@ -275,6 +385,9 @@ class FiveChanExplorer:
                 except Exception as e:
                     print(f"スレッド処理エラー: {str(e)}")
                     continue
+
+            # リクエスト間の遅延
+            time.sleep(self.request_delay)
             
             return ai_threads
             

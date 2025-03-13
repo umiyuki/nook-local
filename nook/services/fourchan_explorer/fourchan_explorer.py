@@ -3,9 +3,9 @@
 import os
 import json
 import re
+from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import List, Dict, Optional, Any
 import time
 
@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 
 from nook.common.gemini_client import GeminiClient
 from nook.common.storage import LocalStorage
-from googletrans import Translator
+from nook.common.tracked_thread import TrackedThread
 from nook.common.counters import counter
 
 
@@ -69,6 +69,10 @@ class FourChanExplorer:
         """
         self.storage = LocalStorage(storage_dir)
         self.grok_client = GeminiClient()
+
+        # 追跡対象スレッドの読み込み
+        script_dir = Path(__file__).parent
+        self.tracked_threads = TrackedThread.load_tracked_threads(script_dir / "tracked_threads.json")
         
         # 対象となるボード
         self.target_boards = ["g", "sci", "biz", "pol"]
@@ -83,66 +87,177 @@ class FourChanExplorer:
         # APIリクエスト間の遅延（4chanのAPI利用規約を遵守するため）
         self.request_delay = 1  # 秒
     
-    def _translate_to_japanese(self, text: str) -> str:
-        """
-        テキストを日本語に翻訳します。
-        
-        Parameters
-        ----------
-        text : str
-            翻訳するテキスト。
-        
-        Returns
-        -------
-        str
-            翻訳されたテキスト。
-        """
-        try:
-            translator = Translator()
-            translated = translator.translate(text, src='en', dest='ja')
-            counter.increment_googletrans("fourchan_explorer")
-            return translated.text
-        except Exception as e:
-            return text
-    
     def run(self, thread_limit: int = 5) -> None:
         """
         4chanからAI関連スレッドを収集して保存します。
-        
+
         Parameters
         ----------
         thread_limit : int, default=5
             各ボードから取得するスレッド数。
         """
         all_threads = []
+
+        try:
+            print("4chanからのスレッド収集を開始...")
+
+            # 追跡対象スレッドを処理
+            for thread_name, tracked_thread in self.tracked_threads.items():
+                try:
+                    print(f"追跡対象スレッド「{thread_name}」の処理を開始します...")
+                    catalog = self._fetch_catalog(tracked_thread.board)
+                    thread_info = self._find_thread_by_name(catalog, thread_name)
+
+                    if not thread_info:
+                        print(f"スレッド「{thread_name}」は見つかりませんでした")
+                        continue
+
+                    thread_id, title = thread_info
+                    print(f"スレッド「{thread_name}」(ID: {thread_id})を処理中...")
+
+                    # スレッドの投稿を取得
+                    thread_data = self._retrieve_thread_posts(tracked_thread.board, thread_id)
+                    
+                    if thread_data:
+                        # 差分を計算
+                        new_posts = [post for post in thread_data
+                                    if not tracked_thread.last_post_no 
+                                    or post.get("no", 0) > tracked_thread.last_post_no]
+                    
+                        if new_posts:
+                            print(f"スレッド「{thread_name}」に {len(new_posts)} 件の新規投稿があります")
+                            thread = Thread(
+                                thread_id=thread_id,
+                                title=title,
+                                url=f"https://boards.4chan.org/{tracked_thread.board}/thread/{thread_id}",
+                                board=tracked_thread.board,
+                                posts=new_posts,
+                                timestamp=int(datetime.now().timestamp())
+                            )
+                            self._summarize_thread(thread)
+                            all_threads.append(thread)
+                            print(f"スレッド「{thread_name}」から {len(new_posts)} 件の新規投稿を取得しました")
+                        else:
+                            print(f"スレッド「{thread_name}」に新規投稿はありません")
+                            
+                        # 追跡情報を更新
+                        max_post_no = max(post.get("no", 0) for post in thread_data)
+                        tracked_thread.update(
+                            thread_id=thread_id,
+                            url=f"https://boards.4chan.org/{tracked_thread.board}/thread/{thread_id}",
+                            last_post_no=max_post_no
+                        )
+                    else:
+                        print(f"スレッド「{thread_name}」のデータ取得に失敗しました")
+
+                except Exception as e:
+                    print(f"追跡対象スレッド「{thread_name}」の処理中にエラーが発生しました: {str(e)}")
+                    continue
+
+            # 各ボードからスレッドを取得
+            ai_threads = self._collect_ai_threads(thread_limit)
+            all_threads.extend(ai_threads)
+            
+            print(f"合計 {len(all_threads)} 件のスレッドを取得しました")
+            
+            # 要約を保存
+            if all_threads:
+                self._store_summaries(all_threads)
+                print(f"スレッドの要約を保存しました")
+            else:
+                print("保存するスレッドがありません")
+            
+            # 追跡情報を保存
+            script_dir = Path(__file__).parent
+            TrackedThread.save_tracked_threads(self.tracked_threads, script_dir / "tracked_threads.json")
+
+        except Exception as e:
+            print(f"スレッド収集処理中にエラーが発生しました: {str(e)}")
+    
+    def _fetch_catalog(self, board: str) -> List[Dict[str, Any]]:
+        """
+        指定された板のカタログを取得します。
+
+        Parameters
+        ----------
+        board : str
+            板名。
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            カタログデータ。
+        """
+        catalog_url = f"https://a.4cdn.org/{board}/catalog.json"
+        response = requests.get(catalog_url)
+        if response.status_code != 200:
+            print(f"カタログの取得に失敗しました: {response.status_code}")
+            return []
         
-        # 各ボードからスレッドを取得
+        return response.json()
+    
+    def _find_thread_by_name(self, catalog: List[Dict[str, Any]], thread_name: str) -> Optional[tuple[int, str]]:
+        """
+        カタログから指定された名前のスレッドを検索します。
+
+        Parameters
+        ----------
+        catalog : List[Dict[str, Any]]
+            カタログデータ。
+        thread_name : str
+            検索するスレッド名。
+
+        Returns
+        -------
+        Optional[tuple[int, str]]
+            見つかった場合は (スレッドID, スレッドタイトル) のタプル、
+            見つからなかった場合は None。
+        """
+        for page in catalog:
+            for thread in page.get("threads", []):
+                subject = thread.get("sub", "").strip()
+                if thread_name.lower() in subject.lower():
+                    return thread.get("no"), subject
+        return None
+    
+    def _collect_ai_threads(self, thread_limit: int) -> List[Thread]:
+        """AIに関連するスレッドを収集します。"""
+        print("AIキーワードを含むスレッドの収集を開始...")
+        collected_threads = []  # ここで collected_threads を初期化
+        tracked_names = {thread.name.lower() for thread in self.tracked_threads.values()}
+        
         for board in self.target_boards:
             try:
+                # 残りの収集数を計算
+                remaining = thread_limit - len(collected_threads)
+                if remaining <= 0:
+                    break
+                
                 print(f"ボード /{board}/ からのスレッド取得を開始します...")
-                threads = self._retrieve_ai_threads(board, thread_limit)
+                threads = self._retrieve_ai_threads(board, remaining)
                 print(f"ボード /{board}/ から {len(threads)} 件のスレッドを取得しました")
                 
-                # スレッドを要約
-                for thread in threads:
-                    self._summarize_thread(thread)
+                # 追跡対象スレッドのタイトルを小文字で保持
+                tracked_titles = {name.lower() for name in tracked_names}
                 
-                all_threads.extend(threads)
+                filtered_threads = []
+                for thread in threads:  # すでに取得済みのスレッドを除外
+                    if not any(title in thread.title.lower() for title in tracked_titles):
+                        self._summarize_thread(thread)
+                        filtered_threads.append(thread)
                 
+                collected_threads.extend(filtered_threads[:remaining])  # 残り数だけ追加
+                if len(collected_threads) >= thread_limit:
+                    break
+
                 # APIリクエスト間の遅延
-                time.sleep(self.request_delay)
-            
+                time.sleep(self.request_delay * 2)  # スレッド取得後は少し長めに待機
+                
             except Exception as e:
                 print(f"Error processing board /{board}/: {str(e)}")
         
-        print(f"合計 {len(all_threads)} 件のスレッドを取得しました")
-        
-        # 要約を保存
-        if all_threads:
-            self._store_summaries(all_threads)
-            print(f"スレッドの要約を保存しました")
-        else:
-            print("保存するスレッドがありません")
+        print(f"合計 {len(collected_threads)} 件のAI関連スレッドを収集しました")
+        return collected_threads  # 修正: collected_threads を返す
     
     def _retrieve_ai_threads(self, board: str, limit: int) -> List[Thread]:
         """
@@ -160,14 +275,8 @@ class FourChanExplorer:
         List[Thread]
             取得したスレッドのリスト。
         """
-        # カタログの取得（すべてのスレッドのリスト）
-        catalog_url = f"https://a.4cdn.org/{board}/catalog.json"
-        response = requests.get(catalog_url)
-        if response.status_code != 200:
-            print(f"カタログの取得に失敗しました: {response.status_code}")
-            return []
-        
-        catalog_data = response.json()
+        # カタログの取得
+        catalog_data = self._fetch_catalog(board)
         
         # AI関連のスレッドをフィルタリング
         ai_threads = []
@@ -188,16 +297,19 @@ class FourChanExplorer:
                     thread_id = thread.get("no")
                     timestamp = thread.get("time", 0)
                     title = thread.get("sub", f"Untitled Thread {thread_id}")
-                    if title and title != f"Untitled Thread {thread_id}":
-                        title_ja = self._translate_to_japanese(title)
-                        title = f"{title}\n（{title_ja}）" if title_ja != title else title
                     
                     # スレッドのURLを構築
                     thread_url = f"https://boards.4chan.org/{board}/thread/{thread_id}"
                     
                     # スレッドの投稿を取得
-                    thread_data = self._retrieve_thread_posts(board, thread_id)
-                    
+                    try:
+                        thread_data = self._retrieve_thread_posts(board, thread_id)
+                        if not thread_data:
+                            print(f"スレッド {thread_id} の投稿の取得に失敗しました")
+                            continue
+                    except Exception as e:
+                        print(f"スレッド {thread_id} の投稿取得中にエラーが発生しました: {str(e)}")
+                        continue
                     ai_threads.append(Thread(
                         thread_id=thread_id,
                         title=title,
@@ -232,20 +344,25 @@ class FourChanExplorer:
         List[Dict[str, Any]]
             投稿のリスト。
         """
-        thread_url = f"https://a.4cdn.org/{board}/thread/{thread_id}.json"
-        response = requests.get(thread_url)
-        
-        if response.status_code != 200:
-            print(f"スレッドの取得に失敗しました: {response.status_code}")
+        try:
+            print(f"スレッド {thread_id} の投稿を取得しています...")
+            thread_url = f"https://a.4cdn.org/{board}/thread/{thread_id}.json"
+            response = requests.get(thread_url)
+            
+            if response.status_code != 200:
+                print(f"スレッド {thread_id} の取得に失敗しました: {response.status_code}")
+                return []
+            
+            thread_data = response.json()
+            posts = thread_data.get("posts", [])
+            print(f"スレッド {thread_id} から {len(posts)} 件の投稿を取得しました")
+            
+            # APIリクエスト間の遅延
+            time.sleep(self.request_delay)
+            return posts
+        except Exception as e:
+            print(f"スレッド {thread_id} の取得中にエラーが発生しました: {str(e)}")
             return []
-        
-        thread_data = response.json()
-        posts = thread_data.get("posts", [])
-        
-        # APIリクエスト間の遅延
-        time.sleep(self.request_delay)
-        
-        return posts
     
     def _summarize_thread(self, thread: Thread) -> None:
         """
@@ -256,7 +373,6 @@ class FourChanExplorer:
         thread : Thread
             要約するスレッド。
         """
-        # スレッドのコンテンツを抽出（最初の投稿と、最も反応のある投稿を含む）
         thread_content = ""
         
         # スレッドのタイトルを追加
@@ -293,14 +409,14 @@ class FourChanExplorer:
         
         注意：攻撃的な内容やヘイトスピーチは緩和し、主要な技術的議論に焦点を当ててください。
         """
-        
+               
         system_instruction = """
         あなたは4chanスレッドの要約を行うアシスタントです。
         投稿された内容を客観的に分析し、技術的議論や情報に焦点を当てた要約を提供してください。
         過度な攻撃性、ヘイトスピーチ、差別的内容は中和して表現し、有益な情報のみを抽出してください。
         回答は日本語で行い、AIやテクノロジーに関連する情報を優先的に含めてください。
         """
-        
+               
         try:
             summary = self.grok_client.generate_content(
                 prompt=prompt,
@@ -308,9 +424,14 @@ class FourChanExplorer:
                 temperature=0.3,
                 max_tokens=1000
             )
-            thread.summary = summary
+            if summary is None:
+                thread.summary = "要約の生成に失敗しました"
+                print(f"スレッド {thread.title} の要約生成に失敗しました: 生成結果がNoneでした")
+            else:
+                thread.summary = summary
         except Exception as e:
             thread.summary = f"要約の生成中にエラーが発生しました: {str(e)}"
+            print(f"スレッド {thread.title} の要約生成中にエラーが発生しました: {str(e)}")
     
     def _store_summaries(self, threads: List[Thread]) -> None:
         """
@@ -326,22 +447,35 @@ class FourChanExplorer:
         
         # ボードごとに整理
         boards = {}
+        total_threads = 0
         for thread in threads:
             if thread.board not in boards:
                 boards[thread.board] = []
             
             boards[thread.board].append(thread)
+            total_threads += 1
         
+        if total_threads == 0:
+            print("保存するスレッドがありません")
+            return
+        
+        print(f"合計 {total_threads} 件のスレッドを保存します")
         # Markdownを生成
         for board, board_threads in boards.items():
             content += f"## /{board}/\n\n"
             
             for thread in board_threads:
                 content += f"### {thread.title}\n[4chan Link]({thread.url})\n\n"
-                content += f"作成日時: <t:{thread.timestamp}:F>\n\n"
+                date_str = datetime.fromtimestamp(thread.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                content += f"作成日時: {date_str}\n\n"
                 content += f"**要約**:\n{thread.summary}\n\n"
                 
                 content += "---\n\n"
         
         # 保存
         self.storage.save_markdown(content, "fourchan_explorer", today)
+
+
+if __name__ == "__main__":
+    explorer = FourChanExplorer()
+    explorer.run()
