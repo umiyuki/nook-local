@@ -2,7 +2,7 @@ import axios from 'axios';
 import { ContentResponse, WeatherResponse } from './types';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api'
+  baseURL: 'http://100.122.74.127:8000/api' || 'http://localhost:8000/api'
 });
 
 export const getContent = async (source: string, date?: string) => {

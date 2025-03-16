@@ -84,7 +84,8 @@ class FiveChanExplorer:
             "lavender.5ch.net",
             "eagle.5ch.net",
             "rosie.5ch.net",
-            "fate.5ch.net"
+            "fate.5ch.net",
+            "mercury.bbspink.com"  # BBSPinkのドメインを追加
         ]
         
         # AIに関連するキーワード
@@ -137,7 +138,10 @@ class FiveChanExplorer:
                 
                 if thread_info:
                     thread_id, title, url = thread_info
-                    posts, timestamp = self._retrieve_thread_posts(url)
+                    if tracked_thread.board == "onatech":  # BBSPinkの場合
+                        posts, timestamp = self._retrieve_thread_posts_fromBBSPink(url)
+                    else:  # 5chの場合
+                        posts, timestamp = self._retrieve_thread_posts(url)
                     
                     if posts:
                         # 差分を計算
@@ -214,9 +218,9 @@ class FiveChanExplorer:
         Parameters
         ----------
         board : str
-            板名。
+            板名（例: "onatech"）。
         thread_name : str
-            検索するスレッド名。
+            検索するスレッド名（例: "なんJLLM部 避難所"）。
 
         Returns
         -------
@@ -224,45 +228,51 @@ class FiveChanExplorer:
             見つかった場合は (スレッドID, スレッドタイトル, URL) のタプル。
             見つからなかった場合は None。
         """
-        board_url = f"https://menu.5ch.net/bbsmenu.html"
-        
+        # BBSPinkか5chかを板名で判断
+        if board in ["onatech"]:  # BBSPinkの場合
+            base_domain = "mercury.bbspink.com"
+            base_url = f"https://{base_domain}/{board}/subback.html"
+        else:  # 5chの場合（既存のロジックを保持）
+            base_url = f"https://{self.subdomains[0]}/{board}/"
+
         try:
-            # 板一覧ページにアクセス
-            response = requests.get(board_url, headers={
+            print(f"アクセス中: {base_url}")
+            response = requests.get(base_url, headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }, timeout=15)
+            response.encoding = 'shift_jis'  # Shift_JIS を明示的に設定
             response.raise_for_status()
-            
-            # 板のURLを探す
+
             soup = BeautifulSoup(response.text, 'html.parser')
-            actual_board_url = None
-            
-            for link in soup.find_all('a'):
-                href = link.get('href', '')
-                if f"/{board}/" in href and not href.endswith('.html'):
-                    actual_board_url = href
-                    break
-            
-            if actual_board_url:
-                # 板のスレッド一覧にアクセス
-                response = requests.get(actual_board_url, headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }, timeout=15)
-                response.raise_for_status()
-                
-                soup = BeautifulSoup(response.text, 'html.parser')
-                for thread_link in soup.select('a[href*="/test/read.cgi/"]'):
-                    if thread_name in thread_link.text:
-                        href = thread_link['href']
-                        match = re.search(r'/(\d+)(?:/|$)', href)
-                        if match:
-                            thread_id = int(match.group(1))
-                            return thread_id, thread_link.text, href
-        
+
+            # BBSPinkの場合、スレッド一覧を <div><small id="trad"> から取得
+            thread_list = soup.find("small", id="trad")
+            if not thread_list:
+                print(f"スレッド一覧が見つかりませんでした: {base_url}")
+                return None
+
+            for thread_link in thread_list.find_all('a', href=True):
+                href = thread_link['href']  # 例: "1739448962/l50"
+                title = thread_link.text.strip()  # 例: "19: なんJLLM部 避難所 ★6 	 (728)"
+
+                # スレッド名がタイトルに含まれているか確認
+                if thread_name.lower() in title.lower():
+                    # スレッドIDを抽出
+                    match = re.search(r'^(\d+)/', href)
+                    if match:
+                        thread_id = int(match.group(1))
+                        # <base> タグを考慮した完全なURLを構築
+                        full_url = f"https://{base_domain}/test/read.cgi/{board}/{thread_id}/"
+                        print(f"スレッド発見: {title} -> {full_url}")
+                        return thread_id, title, full_url
+
+            print(f"スレッド「{thread_name}」が見つかりませんでした: {base_url}")
+            return None
+
         except Exception as e:
             print(f"スレッド検索エラー: {str(e)}")
-        
-        return None
+            return None
+    
     def _retrieve_ai_threads(self, board_id: str, limit: int) -> List[Thread]:
         """
         特定の板からAI関連スレッドを取得します。
@@ -394,6 +404,90 @@ class FiveChanExplorer:
         except Exception as e:
             print(f"板 {board_id} からのスレッド取得エラー: {str(e)}")
             return []
+
+    def _retrieve_thread_posts_fromBBSPink(self, thread_url: str, working_subdomain: Optional[str] = None) -> tuple[List[Dict[str, Any]], int]:
+        """
+        スレッドの投稿を取得します。
+        
+        Parameters
+        ----------
+        thread_url : str
+            スレッドのURL。
+        working_subdomain : Optional[str], default=None
+            動作しているサブドメイン。
+            
+        Returns
+        -------
+        tuple[List[Dict[str, Any]], int]
+            投稿のリストとスレッド作成タイムスタンプのタプル。
+        """
+        # 全件取得のために /l50 を削除（必要に応じて /l1000 に変更可能）
+        if thread_url.endswith('/l50'):
+            thread_url = thread_url.rstrip('/l50')
+        thread_url = thread_url.rstrip('/')  # /l50 を付けない場合
+
+        try:
+            print(f"スレッド {thread_url} にアクセスしています...")
+            response = requests.get(thread_url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Referer': 'https://mercury.bbspink.com/onatech/subback.html'
+            }, timeout=15)
+            response.encoding = 'shift_jis'  # BBSPinkはShift_JISを使用
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, 'html.parser')
+            posts = []
+            timestamp = int(datetime.now().timestamp())
+
+            # BBSPinkの投稿を取得
+            post_elements = soup.select('article.post')  # 投稿は <article class="post"> 内に格納
+            if not post_elements:
+                print(f"警告: 投稿が見つかりませんでした。HTML構造を確認してください: {soup.prettify()[:500]}...")
+                return [], timestamp
+
+            for i, post in enumerate(post_elements):  # 最初の10投稿を取得
+                post_id_elem = post.find('span', class_='postid')
+                date_elem = post.find('span', class_='date')
+                uid_elem = post.find('span', class_='uid')
+                content_elem = post.find('section', class_='post-content')
+
+                post_number = int(post_id_elem.text) if post_id_elem else i + 1
+                date_str = date_elem.text.strip() if date_elem else ""
+                uid = uid_elem.text.strip() if uid_elem else "ID:???"
+                content = content_elem.text.strip() if content_elem else ""
+
+                if i == 0 and date_str:
+                    try:
+                        # 小数点の有無に対応
+                        date_clean = date_str.split('.')[0] if '.' in date_str else date_str
+                        dt = datetime.strptime(date_clean, '%Y/%m/%d(%a) %H:%M:%S')
+                        timestamp = int(dt.timestamp())
+                    except Exception as e:
+                        print(f"タイムスタンプ解析エラー: {str(e)}, 使用された日付: {date_str}")
+                        # フォールバックとして別の形式を試す
+                        try:
+                            dt = datetime.strptime(date_clean, '%Y/%m/%d %H:%M:%S')
+                            timestamp = int(dt.timestamp())
+                        except Exception as e2:
+                            print(f"代替形式でも解析失敗: {str(e2)}")
+
+                posts.append({
+                    "no": post_number,
+                    "com": content,
+                    "time": date_str,
+                    "uid": uid
+                })
+
+            print(f"取得した投稿数: {len(posts)}")
+            if not posts:
+                print(f"警告: 投稿内容が空です。HTMLを確認してください: {soup.prettify()[:500]}...")
+
+            return posts, timestamp
+
+        except Exception as e:
+            print(f"スレッド {thread_url} からの投稿取得エラー: {str(e)}")
+            return [], int(datetime.now().timestamp())
     
     def _retrieve_thread_posts(self, thread_url: str, working_subdomain: Optional[str] = None) -> tuple[List[Dict[str, Any]], int]:
         """
@@ -631,24 +725,24 @@ class FiveChanExplorer:
                 thread_content += f">>{post_number}: {reply_text}\n\n"
         
         prompt = f"""
-        以下の5chan（旧2ちゃんねる）スレッドを要約してください。
+        以下の5chan（旧2ちゃんねる）スレッドを詳しくまとめてください。
 
         板: /{thread.board}/
         {thread_content}
         
-        要約は以下の形式で行い、日本語で回答してください:
-        1. スレッドの主な内容（1-2文）
-        2. 議論の主要ポイント（箇条書き3-5点）
-        3. スレッドの全体的な論調
+        解説は以下の形式で行い、日本語で回答してください:
+        1. スレッドの流れを詳細に説明
+        2. 主要な投稿を抜粋
+        3. 議論の主要ポイント
+        4. スレッドの全体的な論調
+        5. 共有されてる情報を抽出
         
-        注意：攻撃的な内容やヘイトスピーチは緩和し、主要な技術的議論に焦点を当ててください。
         """
         
         system_instruction = """
-        あなたは5chan（旧2ちゃんねる）スレッドの要約を行うアシスタントです。
-        投稿された内容を客観的に分析し、技術的議論や情報に焦点を当てた要約を提供してください。
-        過度な攻撃性、ヘイトスピーチ、差別的内容は中和して表現し、有益な情報のみを抽出してください。
-        回答は日本語で行い、AIやテクノロジーに関連する情報を優先的に含めてください。
+        あなたは5chan（旧2ちゃんねる）スレッドの解説を行うアシスタントです。
+        投稿された内容を客観的に分析してください。
+        回答は日本語で行います。
         """
         
         try:
@@ -656,7 +750,7 @@ class FiveChanExplorer:
                 prompt=prompt,
                 system_instruction=system_instruction,
                 temperature=0.3,
-                max_tokens=1000
+                max_tokens=10000
             )
             thread.summary = summary
         except Exception as e:
