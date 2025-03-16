@@ -207,10 +207,12 @@ class PaperSummarizer:
             
             # タイトルとアブストラクトを日本語に翻訳
             title = paper.title
+            title_ja = self._translate_to_japanese(paper.title)
+            title_combined = f"{title}\n（{title_ja}）" if title_ja != title else title
             abstract_ja = self._translate_to_japanese(paper.summary)
             
             return PaperInfo(
-                title=title,
+                title=title_combined,
                 abstract=abstract_ja,
                 url=paper.entry_id,
                 contents=contents
