@@ -426,9 +426,13 @@ class FourChanExplorer:
                 max_tokens=10000
             )
             if summary is None:
+                # LLM呼び出しをカウント (エラーの場合でもAPIは呼び出されているため)
+                counter.increment_llm("fourchan_explorer")
                 thread.summary = "要約の生成に失敗しました"
                 print(f"スレッド {thread.title} の要約生成に失敗しました: 生成結果がNoneでした")
             else:
+                # LLM呼び出しをカウント
+                counter.increment_llm("fourchan_explorer")
                 thread.summary = summary
         except Exception as e:
             thread.summary = f"要約の生成中にエラーが発生しました: {str(e)}"

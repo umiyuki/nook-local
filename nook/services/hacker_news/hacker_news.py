@@ -1,7 +1,7 @@
 """Hacker Newsの記事を収集するサービス。"""
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
 
@@ -28,12 +28,18 @@ class Story:
         URL。
     text : str | None
         本文。
+    comments : List[str]
+        記事へのコメント。
+    story_id : int
+        Hacker News記事のID。
     """
     title: str
     score: int
     url: Optional[str] = None
     text: Optional[str] = None
     summary: str = ""
+    story_id: int = 0
+    comments: List[str] = field(default_factory=list)
 
 
 
@@ -56,7 +62,7 @@ class HackerNewsRetriever:
         storage_dir : str, default="data"
             ストレージディレクトリのパス。
         """
-        self.grok_client = Grok3Client()
+        self.grok_client = GeminiClient()
         self.storage = LocalStorage(storage_dir)
         self.base_url = "https://hacker-news.firebaseio.com/v0"
     
@@ -102,9 +108,24 @@ class HackerNewsRetriever:
             story = Story(
                 title=item.get("title", ""),
                 score=item.get("score", 0),
+                story_id=story_id,
                 url=item.get("url"),
-                text=item.get("text")
+                text=item.get("text"),
+                comments=[]
             )
+
+            # コメントの取得
+            if "kids" in item:
+                # 上位5件のコメントを取得
+                comment_ids = item["kids"][:50]
+                for comment_id in comment_ids:
+                    try:
+                        comment_response = requests.get(f"{self.base_url}/item/{comment_id}.json")
+                        comment_data = comment_response.json()
+                        if comment_data and "text" in comment_data:
+                            story.comments.append(comment_data["text"])
+                    except Exception as e:
+                        print(f"Error fetching comment {comment_id}: {str(e)}")
             
             # URLがある場合は記事の内容を取得
             if story.url and not story.text:
@@ -163,8 +184,8 @@ class HackerNewsRetriever:
         story : Story
             要約する記事。
         """
-        if not story.text:
-            story.summary = "本文情報がないため要約できません。"
+        if not story.text and not story.comments:
+            story.summary = "本文とコメントの情報がないため要約できません。"
             return
 
         prompt = f"""
@@ -172,19 +193,46 @@ class HackerNewsRetriever:
 
         タイトル: {story.title}
         本文: {story.text}
-        スコア: {story.score}
+        スコア: {story.score}"""
+        
+        if story.comments:
+            prompt += f"""
+
+        記事へのコメント:
+        {chr(10).join(f"- {comment}" for comment in story.comments)}"""
+
+        if story.text and story.comments:
+            prompt += """
+
+        要約は以下の形式で行い、日本語で回答してください:
+        1. 記事の日本語翻訳されたタイトル
+        2. 記事の主な内容
+        3. 重要なポイント（箇条書き）
+        4. この記事が注目を集めた理由
+        5. コミュニティの反応
+           - コメントから見られる主な意見や議論
+           - 記事に対する全体的な評価や感想"""
+        elif not story.text and story.comments:
+            prompt += """
+
+        要約は以下の形式で行い、日本語で回答してください:
+        1. コメントから推測される記事の主題
+        2. 主な議論のポイント（箇条書き3-5点）
+        3. コミュニティの全体的な反応や評価"""
+        else:
+            prompt += """
 
         要約は以下の形式で行い、日本語で回答してください:
         1. 記事の主な内容（1-2文）
         2. 重要なポイント（箇条書き3-5点）
-        3. この記事が注目を集めた理由
-        """
+        3. 記事のインパクトや意義"""
 
         system_instruction = """
         あなたはHacker News記事の要約を行うアシスタントです。
-        与えられた記事を分析し、簡潔で情報量の多い要約を作成してください。
+        与えられた記事を分析し、情報量の多い要約を作成してください。
         技術的な内容は正確に、一般的な内容は分かりやすく要約してください。
         回答は必ず日本語で行ってください。専門用語は適切に翻訳し、必要に応じて英語の専門用語を括弧内に残してください。
+        コメントの分析では、建設的な議論や重要な洞察を中心に要約してください。
         """
 
         try:
@@ -192,11 +240,42 @@ class HackerNewsRetriever:
                 prompt=prompt,
                 system_instruction=system_instruction,
                 temperature=0.3,
-                max_tokens=1000
+                max_tokens=10000
             )
             story.summary = summary
+            # LLM呼び出しをカウント
+            counter.increment_llm("hacker_news")
         except Exception as e:
             story.summary = f"要約の生成中にエラーが発生しました: {str(e)}"
+
+    def _translate_to_japanese(self, text: str) -> str:
+        """
+        テキストを日本語に翻訳します。
+        
+        Parameters
+        ----------
+        text : str
+            翻訳するテキスト。
+            
+        Returns
+        -------
+        str
+            翻訳されたテキスト。
+        """
+        if not text:
+            return ""
+        
+        try:
+            # GoogletransのTranslatorインスタンスを作成
+            translator = Translator()
+            # 英語から日本語に翻訳
+            translated = translator.translate(text, src='en', dest='ja')
+            # Googletrans呼び出しをカウント
+            counter.increment_googletrans("hacker_news")
+            return translated.text
+        except Exception as e:
+            print(f"Error translating text: {str(e)}")
+            return text  # 翻訳に失敗した場合は原文を返す
 
     def _store_summaries(self, stories: List[Story]) -> None:
         """
@@ -212,7 +291,13 @@ class HackerNewsRetriever:
         
         for story in stories:
             title_link = f"[{story.title}]({story.url})" if story.url else story.title
-            content += f"## {title_link}\n\n"
+            
+            # コメントページへのリンクを追加（コメントの数も表示）
+            comments_count = len(story.comments)
+            comments_text = f"[コメント ({comments_count})]"
+            comments_link = f"https://news.ycombinator.com/item?id={story.story_id}"
+            
+            content += f"## {title_link} - {f'[コメント ({comments_count})]({comments_link})'}\n\n"
             content += f"スコア: {story.score}\n\n"
             
             # 要約があれば表示、なければ本文を表示

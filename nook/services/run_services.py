@@ -206,7 +206,7 @@ def main():
     if args.service == "all" or args.service == "github_details":
         run_github_details_service()
     
-    if args.service == "all" or args.service == "hackernews":
+    if args.service == "all" or args.service == "hacker_news":
         run_hacker_news()
     
     if args.service == "all" or args.service == "reddit":

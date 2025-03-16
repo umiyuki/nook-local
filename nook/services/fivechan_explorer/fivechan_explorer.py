@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from nook.common.gemini_client import GeminiClient
 from nook.common.storage import LocalStorage
 from nook.common.tracked_thread import TrackedThread
+from nook.common.counters import counter
 
 
 @dataclass
@@ -753,6 +754,8 @@ class FiveChanExplorer:
                 max_tokens=10000
             )
             thread.summary = summary
+            # LLM呼び出しをカウント
+            counter.increment_llm("fivechan_explorer")
         except Exception as e:
             thread.summary = f"要約の生成中にエラーが発生しました: {str(e)}"
     
