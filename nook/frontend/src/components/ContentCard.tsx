@@ -26,7 +26,18 @@ export const ContentCard: React.FC<ContentCardProps> = ({ item, darkMode }) => {
         )}
       </div>
       <div className={`prose prose-lg max-w-none w-full overflow-x-auto ${darkMode ? 'prose-invert' : ''}`}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            a: ({ node, children, ...props }) => (
+              <a
+                {...props}
+                target="_blank"
+                rel="noopener noreferrer"
+              >{children}</a>
+            )
+          }}
+        >{item.content}</ReactMarkdown>
       </div>
       <div className="mt-4 flex items-center justify-between">
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
